@@ -14,7 +14,7 @@ import {
 import { Moon, Sun } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -50,26 +50,32 @@ const allNavItems = [
     roles: ["admin"],
   },
   {
+    title: "Atendimento",
+    url: "/atendimento",
+    icon: Stethoscope,
+    roles: ["doctor", "admin"],
+  },
+  {
     title: "Agendamentos",
-    url: "/appointments",
+    url: "/agendamentos",
     icon: CalendarDays,
     roles: ["admin", "receptionist", "doctor"],
   },
   {
     title: "Médicos",
-    url: "/doctors",
+    url: "/medicos",
     icon: Stethoscope,
     roles: ["admin"],
   },
   {
     title: "Pacientes",
-    url: "/patients",
+    url: "/pacientes",
     icon: Users2,
     roles: ["admin", "receptionist", "doctor"],
   },
   {
     title: "Usuários",
-    url: "/users",
+    url: "/usuarios",
     icon: UserCheck,
     roles: ["admin"],
   },
@@ -92,7 +98,6 @@ const roleLabels: Record<string, { label: string; className: string }> = {
 };
 
 const AppSidebar = () => {
-  const router = useRouter();
   const session = authClient.useSession();
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
@@ -111,7 +116,7 @@ const AppSidebar = () => {
     await authClient.signOut({
       fetchOptions: {
         onSuccess: () => {
-          router.push("/authentication");
+          window.location.href = "/authentication";
         },
       },
     });
@@ -190,9 +195,9 @@ const AppSidebar = () => {
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
-                      isActive={pathname === "/subscription"}
+                      isActive={pathname === "/assinatura"}
                     >
-                      <Link href="/subscription">
+                      <Link href="/assinatura">
                         <Gem />
                         <span>Assinatura & Plano</span>
                       </Link>

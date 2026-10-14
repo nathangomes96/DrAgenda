@@ -32,7 +32,7 @@ export const validateAuthentication = async ({
     session.user.clinic?.role &&
     !allowedRoles.includes(session.user.clinic.role)
   ) {
-    redirect("/appointments");
+    redirect("/agendamentos");
   }
   return session;
 };

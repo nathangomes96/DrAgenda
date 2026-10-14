@@ -1,7 +1,6 @@
 "use client";
 
 import { LogOut, ShieldAlert } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { authClient } from "@/lib/auth-client";
 
 export default function AccessBlockedPage() {
-  const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
@@ -18,12 +16,12 @@ export default function AccessBlockedPage() {
       await authClient.signOut({
         fetchOptions: {
           onSuccess: () => {
-            router.push("/authentication");
+            window.location.href = "/authentication";
           },
         },
       });
     } catch {
-      router.push("/authentication");
+      window.location.href = "/authentication";
     }
   };
 

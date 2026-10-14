@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -41,8 +40,6 @@ const registerSchema = z.object({
 });
 
 const SignUpForm = () => {
-  const router = useRouter();
-
   const form = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -58,10 +55,11 @@ const SignUpForm = () => {
         email: values.email,
         password: values.password,
         name: values.name,
+        callbackURL: "/dashboard",
       },
       {
         onSuccess: () => {
-          router.push("/dashboard");
+          window.location.href = "/dashboard";
         },
         onError: (ctx) => {
           if (ctx.error.code === "USER_ALREADY_EXISTS") {

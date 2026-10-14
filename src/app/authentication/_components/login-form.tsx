@@ -1,7 +1,6 @@
 "use client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -39,7 +38,6 @@ const loginSchema = z.object({
 });
 
 const LoginForm = () => {
-  const router = useRouter();
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -53,13 +51,14 @@ const LoginForm = () => {
       {
         email: values.email,
         password: values.password,
+        callbackURL: "/dashboard",
       },
       {
         onSuccess: () => {
-          router.push("/dashboard");
+          window.location.href = "/dashboard";
         },
         onError: () => {
-          toast.error("Email ou senha inválidos");
+          toast.error("Email ou senha inválidos");
         },
       },
     );
