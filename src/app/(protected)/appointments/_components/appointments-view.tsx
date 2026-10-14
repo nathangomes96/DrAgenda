@@ -1,8 +1,9 @@
 "use client";
 
+import { useMemo, useState } from "react";
+import { isSameDay, isWithinInterval, startOfDay, endOfDay, addDays } from "date-fns";
 import { Bell, Check, Copy, ExternalLink, Filter, Link2 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,8 @@ import { appointmentsTable, doctorsTable, patientsTable } from "@/db/schema";
 
 import AddAppointmentButton from "./add-appointment-button";
 import { appointmentsTableColumns } from "./table-columns";
+import { CalendarGrid } from "../../agendamentos/_components/calendar-grid";
+import { QuickFiltersBar } from "../../agendamentos/_components/quick-filters-bar";
 
 type AppointmentWithRelations = typeof appointmentsTable.$inferSelect & {
   patient: {
@@ -49,9 +52,12 @@ export function AppointmentsView({
   doctors,
   appointments,
 }: AppointmentsViewProps) {
-  const [selectedFilter, setSelectedFilter] = useState<
-    "all" | "pending" | "confirmed" | "cancelled"
-  >("all");
+  // Modo de visualização: Grade por padrão
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [periodFilter, setPeriodFilter] = useState<"today" | "tomorrow" | "7days" | "custom">("7days");
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | "all">("all");
+  const [searchPatient, setSearchPatient] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "confirmed" | "cancelled">("all");
   const [hasCopied, setHasCopied] = useState(false);
 
   const activeIdentifier = clinicSlug || clinicId;
@@ -59,19 +65,57 @@ export function AppointmentsView({
   const pendingAppointments = appointments.filter(
     (a) => a.status === "pending",
   );
-  const confirmedAppointments = appointments.filter(
-    (a) => a.status === "confirmed",
-  );
-  const cancelledAppointments = appointments.filter(
-    (a) => a.status === "cancelled",
-  );
 
-  const filteredAppointments = appointments.filter((appointment) => {
-    if (selectedFilter === "pending") return appointment.status === "pending";
-    if (selectedFilter === "confirmed") return appointment.status === "confirmed";
-    if (selectedFilter === "cancelled") return appointment.status === "cancelled";
-    return true;
-  });
+  // Filtragem multi-critério
+  const filteredAppointments = useMemo(() => {
+    return appointments.filter((appointment) => {
+      // 1. Filtro por status
+      if (statusFilter !== "all" && appointment.status !== statusFilter) {
+        return false;
+      }
+
+      // 2. Filtro por médico
+      if (selectedDoctorId !== "all" && appointment.doctorId !== selectedDoctorId) {
+        return false;
+      }
+
+      // 3. Filtro por nome do paciente
+      if (searchPatient.trim()) {
+        const query = searchPatient.toLowerCase();
+        const patientName = appointment.patient?.name?.toLowerCase() || "";
+        if (!patientName.includes(query)) {
+          return false;
+        }
+      }
+
+      // 4. Filtro por período rápido (se estiver no modo de tabela ou filtrando período)
+      if (periodFilter === "today") {
+        const aptDate = new Date(appointment.date);
+        if (!isSameDay(aptDate, new Date())) {
+          return false;
+        }
+      } else if (periodFilter === "tomorrow") {
+        const aptDate = new Date(appointment.date);
+        const tomorrow = addDays(new Date(), 1);
+        if (!isSameDay(aptDate, tomorrow)) {
+          return false;
+        }
+      } else if (periodFilter === "7days") {
+        const aptDate = new Date(appointment.date);
+        const start = startOfDay(new Date());
+        const end = endOfDay(addDays(new Date(), 7));
+        if (aptDate < start || aptDate > end) {
+          // Para visualização em tabela, restringe aos 7 dias
+          // Na grade visual mantemos para navegação semanal
+          if (viewMode === "table") {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    });
+  }, [appointments, statusFilter, selectedDoctorId, searchPatient, periodFilter, viewMode]);
 
   const handleCopyBookingLink = () => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -87,7 +131,7 @@ export function AppointmentsView({
   return (
     <div className="space-y-6">
       {/* Barra de Ações do Topo */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-muted/40 p-4 rounded-xl border">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-muted/40 p-4 rounded-2xl border">
         <div>
           <h3 className="font-semibold text-sm sm:text-base flex items-center gap-2">
             <Link2 className="size-4 text-primary" />
@@ -136,7 +180,7 @@ export function AppointmentsView({
 
       {/* Alerta de Agendamentos Pendentes */}
       {pendingAppointments.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40 p-4 text-amber-900 dark:text-amber-200 shadow-xs animate-in fade-in">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40 p-4 text-amber-900 dark:text-amber-200 shadow-xs animate-in fade-in">
           <div className="flex items-center gap-3">
             <div className="flex size-9 items-center justify-center rounded-lg bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100">
               <Bell className="size-5 animate-bounce" />
@@ -151,11 +195,11 @@ export function AppointmentsView({
             </div>
           </div>
 
-          {selectedFilter !== "pending" && (
+          {statusFilter !== "pending" && (
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setSelectedFilter("pending")}
+              onClick={() => setStatusFilter("pending")}
               className="border-amber-400 bg-amber-100 text-amber-900 hover:bg-amber-200 text-xs font-semibold whitespace-nowrap self-end sm:self-auto"
             >
               Ver Pendentes ({pendingAppointments.length})
@@ -164,69 +208,30 @@ export function AppointmentsView({
         </div>
       )}
 
-      {/* Filtros em Abas */}
-      <div className="flex flex-wrap items-center gap-2 border-b pb-3">
-        <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mr-2">
-          <Filter className="size-3.5" /> Filtrar:
-        </span>
+      {/* Barra de Filtros Rápidos (Idêntica à referência ClínicaSys) */}
+      <QuickFiltersBar
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        periodFilter={periodFilter}
+        onPeriodFilterChange={setPeriodFilter}
+        selectedDoctorId={selectedDoctorId}
+        onDoctorChange={setSelectedDoctorId}
+        doctors={doctors}
+        searchPatient={searchPatient}
+        onSearchPatientChange={setSearchPatient}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+      />
 
-        <Button
-          variant={selectedFilter === "all" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setSelectedFilter("all")}
-          className="h-8 gap-1.5 text-xs font-medium rounded-full"
-        >
-          Todos
-          <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
-            {appointments.length}
-          </Badge>
-        </Button>
-
-        <Button
-          variant={selectedFilter === "pending" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setSelectedFilter("pending")}
-          className="h-8 gap-1.5 text-xs font-medium rounded-full"
-        >
-          Pendentes
-          <Badge
-            className={
-              pendingAppointments.length > 0
-                ? "bg-amber-500 text-white px-1.5 py-0 text-[10px]"
-                : "bg-muted text-muted-foreground px-1.5 py-0 text-[10px]"
-            }
-          >
-            {pendingAppointments.length}
-          </Badge>
-        </Button>
-
-        <Button
-          variant={selectedFilter === "confirmed" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setSelectedFilter("confirmed")}
-          className="h-8 gap-1.5 text-xs font-medium rounded-full"
-        >
-          Confirmados
-          <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
-            {confirmedAppointments.length}
-          </Badge>
-        </Button>
-
-        <Button
-          variant={selectedFilter === "cancelled" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => setSelectedFilter("cancelled")}
-          className="h-8 gap-1.5 text-xs font-medium rounded-full"
-        >
-          Cancelados
-          <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
-            {cancelledAppointments.length}
-          </Badge>
-        </Button>
-      </div>
-
-      {/* Tabela de Agendamentos */}
-      <DataTable data={filteredAppointments} columns={appointmentsTableColumns} />
+      {/* Alternância entre Grade Semanal/Diária e Tabela */}
+      {viewMode === "grid" ? (
+        <CalendarGrid
+          appointments={filteredAppointments}
+          doctors={doctors}
+        />
+      ) : (
+        <DataTable data={filteredAppointments} columns={appointmentsTableColumns} />
+      )}
     </div>
   );
 }
