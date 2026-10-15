@@ -1,5 +1,7 @@
 "use client";
 import {
+  Boxes,
+  Building,
   Building2,
   CalendarDays,
   EllipsisVertical,
@@ -7,6 +9,8 @@ import {
   LayoutDashboard,
   LogOut,
   MessageCircle,
+  Settings2,
+  ShieldCheck,
   Stethoscope,
   UserCheck,
   Users2,
@@ -208,6 +212,54 @@ const AppSidebar = () => {
             </SidebarGroupContent>
           </SidebarGroup>
         )}
+
+        {Boolean(session.data?.user?.isSuperAdmin) && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="flex items-center gap-1.5 text-primary font-semibold">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Gestão SaaS (Master)</span>
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/admin/empresas"}
+                  >
+                    <Link href="/admin/empresas">
+                      <Building className="text-primary" />
+                      <span>Empresas & Vencimentos</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/admin/planos"}
+                  >
+                    <Link href="/admin/planos">
+                      <Boxes className="text-amber-500" />
+                      <span>Planos & Limites</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/admin/configuracoes"}
+                  >
+                    <Link href="/admin/configuracoes">
+                      <Settings2 className="text-blue-500" />
+                      <span>Configurações & Pagamentos</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t">
@@ -230,14 +282,24 @@ const AppSidebar = () => {
                     <span className="text-[11px] text-muted-foreground truncate">
                       {session.data?.user?.email}
                     </span>
-                    <Badge
-                      variant="outline"
-                      className={`mt-1 w-fit text-[10px] px-1.5 py-0 h-4 border font-medium ${
-                        roleLabels[userRole]?.className || ""
-                      }`}
-                    >
-                      {roleLabels[userRole]?.label || userRole}
-                    </Badge>
+                    <div className="flex items-center gap-1 mt-1 flex-wrap">
+                      <Badge
+                        variant="outline"
+                        className={`w-fit text-[10px] px-1.5 py-0 h-4 border font-medium ${
+                          roleLabels[userRole]?.className || ""
+                        }`}
+                      >
+                        {roleLabels[userRole]?.label || userRole}
+                      </Badge>
+                      {Boolean(session.data?.user?.isSuperAdmin) && (
+                        <Badge
+                          variant="secondary"
+                          className="w-fit text-[10px] px-1.5 py-0 h-4 bg-primary/20 text-primary border-primary/30 font-semibold"
+                        >
+                          Super Admin
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <EllipsisVertical className="ml-auto size-4 shrink-0" />
                 </SidebarMenuButton>
