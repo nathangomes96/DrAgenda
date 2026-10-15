@@ -153,7 +153,7 @@ export function WhatsAppReminderDialog({
           <div className="flex items-center gap-2 text-emerald-600 mb-1">
             <MessageCircle className="size-5" />
             <span className="text-xs font-bold uppercase tracking-wider">
-              Lembretes Anti No-Show via WhatsApp
+              Lembretes  No-Show via WhatsApp
             </span>
           </div>
           <DialogTitle className="text-lg">
@@ -177,7 +177,7 @@ export function WhatsAppReminderDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="reminder_24h">
-                  🔔 Lembrete 24h com Confirmação (Anti No-Show)
+                  🔔 Lembrete 24h com Confirmação
                 </SelectItem>
                 <SelectItem value="reminder_today">
                   ⚡ Lembrete do Dia (Hoje) com orientações
