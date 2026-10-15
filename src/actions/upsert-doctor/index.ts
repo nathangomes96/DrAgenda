@@ -2,14 +2,20 @@
 
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
-import { and, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { hashPassword } from "better-auth/crypto";
 
 import { z } from "zod";
 
 import { db } from "@/db";
-import { accountsTable, doctorsTable, usersTable, usersToClinicsTable } from "@/db/schema";
+import {
+  accountsTable,
+  clinicsTable,
+  doctorsTable,
+  usersTable,
+  usersToClinicsTable,
+} from "@/db/schema";
 import { protectedWithClinicActionClient } from "@/lib/next-safe-action";
 
 import { upsertDoctorSchema } from "./schema";
@@ -22,6 +28,32 @@ export const upsertDoctor = protectedWithClinicActionClient
     const clinicId = ctx?.user.clinic?.id;
     if (!clinicId) {
       throw new Error("Clínica não encontrada.");
+    }
+
+    // Se estiver cadastrando um novo médico (sem id), valida o limite do plano da clínica
+    if (!parsedInput.id) {
+      const [doctorCountResult, clinicData] = await Promise.all([
+        db
+          .select({ total: count() })
+          .from(doctorsTable)
+          .where(eq(doctorsTable.clinicId, clinicId)),
+        db.query.clinicsTable.findFirst({
+          where: eq(clinicsTable.id, clinicId),
+          with: { plan: true },
+        }),
+      ]);
+
+      const currentDoctorsCount = Number(doctorCountResult[0]?.total || 0);
+      const maxDoctors =
+        clinicData?.customMaxDoctors ?? clinicData?.plan?.maxDoctors ?? 3;
+
+      if (maxDoctors > 0 && currentDoctorsCount >= maxDoctors) {
+        throw new Error(
+          `Limite de profissionais atingido para o plano atual (${maxDoctors} ${
+            maxDoctors === 1 ? "médico" : "médicos"
+          }). Faça upgrade para adicionar mais profissionais.`,
+        );
+      }
     }
 
     const availableFromTime = parsedInput.availableFromTime;
