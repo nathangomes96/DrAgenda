@@ -6,10 +6,14 @@ import { auth } from "@/lib/auth";
 export const validateAuthentication = async ({
   mustHavePlan = false,
   mustHaveClinic = false,
+  mustBeSuperAdmin = false,
+  checkPlanExpiration = false,
   allowedRoles,
 }: {
   mustHavePlan?: boolean;
   mustHaveClinic?: boolean;
+  mustBeSuperAdmin?: boolean;
+  checkPlanExpiration?: boolean;
   allowedRoles?: Array<"admin" | "doctor" | "receptionist">;
 } = {}) => {
   const session = await auth.api.getSession({
@@ -17,6 +21,9 @@ export const validateAuthentication = async ({
   });
   if (!session?.user) {
     redirect("/authentication");
+  }
+  if (mustBeSuperAdmin && !(session.user as any)?.isSuperAdmin) {
+    redirect("/dashboard");
   }
   if (mustHavePlan && !session.user.plan) {
     // redirect("/new-subscription");
@@ -34,6 +41,19 @@ export const validateAuthentication = async ({
   ) {
     redirect("/agendamentos");
   }
+  if (checkPlanExpiration && !(session.user as any)?.isSuperAdmin) {
+    const clinic = session.user.clinic as any;
+    if (clinic) {
+      const isExpired =
+        clinic.planStatus === "expired" ||
+        (clinic.planStatus !== "lifetime" &&
+          clinic.planExpiresAt &&
+          new Date() > new Date(clinic.planExpiresAt));
+      if (isExpired) {
+        redirect("/assinatura?expirado=true");
+      }
+    }
+  }
   return session;
 };
 
@@ -41,14 +61,24 @@ const WithAuthentication = async ({
   children,
   mustHavePlan = false,
   mustHaveClinic = false,
+  mustBeSuperAdmin = false,
+  checkPlanExpiration = false,
   allowedRoles,
 }: {
   children: React.ReactNode;
   mustHavePlan?: boolean;
   mustHaveClinic?: boolean;
+  mustBeSuperAdmin?: boolean;
+  checkPlanExpiration?: boolean;
   allowedRoles?: Array<"admin" | "doctor" | "receptionist">;
 }) => {
-  await validateAuthentication({ mustHavePlan, mustHaveClinic, allowedRoles });
+  await validateAuthentication({
+    mustHavePlan,
+    mustHaveClinic,
+    mustBeSuperAdmin,
+    checkPlanExpiration,
+    allowedRoles,
+  });
   return children;
 };
 

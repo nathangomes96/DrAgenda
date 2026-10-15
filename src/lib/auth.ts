@@ -38,9 +38,18 @@ export const auth = betterAuth({
       ]);
       //TODO: Ao adaptar para o usuário ter multiplas clínicas, é necessário adaptar o código para lidar com isso.
       const clinic = clinics?.[0];
+      const isSuperAdmin = Boolean(
+        userData?.isSuperAdmin ||
+        (process.env.SUPERADMIN_EMAIL &&
+          user.email &&
+          user.email.toLowerCase().trim() ===
+            process.env.SUPERADMIN_EMAIL.toLowerCase().trim()),
+      );
+
       return {
         user: {
           ...user,
+          isSuperAdmin,
           plan: userData?.plan,
           clinic: clinic?.clinicId
             ? {
@@ -52,6 +61,14 @@ export const auth = betterAuth({
                   | "receptionist"
                   | "doctor",
                 status: (clinic?.status ?? "active") as "active" | "blocked",
+                planStatus: (clinic?.clinic.planStatus ?? "trial") as
+                  | "trial"
+                  | "active"
+                  | "expired"
+                  | "lifetime",
+                planExpiresAt: clinic?.clinic.planExpiresAt ?? null,
+                planId: clinic?.clinic.planId ?? null,
+                customMaxDoctors: clinic?.clinic.customMaxDoctors ?? null,
               }
             : undefined,
         },
@@ -62,6 +79,11 @@ export const auth = betterAuth({
   user: {
     modelName: "usersTable",
     additionalFields: {
+      isSuperAdmin: {
+        type: "boolean",
+        fieldName: "isSuperAdmin",
+        required: false,
+      },
       stripeCustomerId: {
         type: "string",
         fieldName: "stripeCustomerId",
