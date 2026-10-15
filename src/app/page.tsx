@@ -63,12 +63,12 @@ export default function LandingPage() {
             </ul>
 
             <div className="lp-nav-actions">
-              <Link href="/dashboard" className="lp-btn lp-btn-secondary lp-btn-sm">
+              <Link href="/authentication" className="lp-btn lp-btn-secondary lp-btn-sm">
                 Entrar
               </Link>
-              <a href="#precos" className="lp-btn lp-btn-primary lp-btn-sm lp-btn-hide-mobile">
+              <Link href="/authentication?tab=register" className="lp-btn lp-btn-primary lp-btn-sm lp-btn-hide-mobile">
                 Experimentar Agora
-              </a>
+              </Link>
             </div>
           </nav>
         </div>
@@ -334,7 +334,7 @@ export default function LandingPage() {
                 </li>
               </ul>
 
-              <Link href="/dashboard" className="lp-btn lp-btn-secondary">
+              <Link href="/authentication?tab=register" className="lp-btn lp-btn-secondary">
                 Escolher Solo
               </Link>
               <div className="lp-plan-footer-note">7 dias grátis • Sem fidelidade</div>
@@ -380,7 +380,7 @@ export default function LandingPage() {
                 </li>
               </ul>
 
-              <Link href="/dashboard" className="lp-btn lp-btn-primary lp-btn-lg">
+              <Link href="/authentication?tab=register" className="lp-btn lp-btn-primary lp-btn-lg">
                 Começar Meus 7 Dias Grátis
               </Link>
               <div className="lp-plan-footer-note">7 dias grátis para testar • Cancele quando quiser</div>
@@ -421,7 +421,7 @@ export default function LandingPage() {
                 </li>
               </ul>
 
-              <Link href="/dashboard" className="lp-btn lp-btn-secondary">
+              <Link href="/authentication?tab=register" className="lp-btn lp-btn-secondary">
                 Escolher Clínica Pro
               </Link>
               <div className="lp-plan-footer-note">7 dias grátis para sua equipe testar</div>
