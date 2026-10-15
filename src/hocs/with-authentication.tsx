@@ -7,7 +7,7 @@ export const validateAuthentication = async ({
   mustHavePlan = false,
   mustHaveClinic = false,
   mustBeSuperAdmin = false,
-  checkPlanExpiration = false,
+  checkPlanExpiration = true,
   allowedRoles,
 }: {
   mustHavePlan?: boolean;

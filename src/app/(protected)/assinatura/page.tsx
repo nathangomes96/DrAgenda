@@ -13,6 +13,7 @@ import { SubscriptionPlan } from "../subscription/_components/subscription-plan"
 const AssinaturaPage = async () => {
   const session = await validateAuthentication({
     mustHaveClinic: true,
+    checkPlanExpiration: false,
     allowedRoles: ["admin"],
   });
 
