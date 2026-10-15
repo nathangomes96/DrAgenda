@@ -199,5 +199,6 @@ export const deleteMedicalRecord = protectedWithRoleActionClient(["admin"])
 
     return {
       success: true,
+      id,
     };
   });

@@ -1,4 +1,5 @@
-import { EllipsisVertical, FileText, Pencil, ShieldCheck, Trash2 } from "lucide-react";
+import { EllipsisVertical, FileText, History, Pencil, ShieldCheck, Stethoscope, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useAction } from "next-safe-action/hooks";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -70,17 +71,32 @@ const PatientTableAction = ({
 
   return (
     <div className="flex items-center gap-1.5 justify-end">
-      {/* Botão de Acesso Rápido ao Prontuário para Médicos e Admins */}
+      {/* Botões de Acesso Rápido para Médicos e Admins */}
       {isMedicalStaff && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 gap-1.5 text-xs text-primary border-primary/30 hover:bg-primary/5 hover:text-primary font-medium"
-          onClick={() => setMedicalRecordIsOpen(true)}
-        >
-          <ShieldCheck className="size-3.5" />
-          <span>Prontuário</span>
-        </Button>
+        <>
+          <Button
+            asChild
+            size="sm"
+            className="h-8 gap-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs"
+            title="Iniciar atendimento clínico completo neste paciente"
+          >
+            <Link href={`/atendimento/avulso?patientId=${patient.id}`}>
+              <Stethoscope className="size-3.5" />
+              <span>Atender</span>
+            </Link>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 text-xs text-primary border-primary/30 hover:bg-primary/5 hover:text-primary font-medium rounded-lg"
+            onClick={() => setMedicalRecordIsOpen(true)}
+            title="Ver histórico de consultas e prontuário do paciente"
+          >
+            <History className="size-3.5" />
+            <span className="hidden sm:inline">Histórico</span>
+          </Button>
+        </>
       )}
 
       <DropdownMenu>
@@ -93,19 +109,30 @@ const PatientTableAction = ({
           <DropdownMenuLabel>{patient.name}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {isMedicalStaff && (
-            <DropdownMenuItem
-              onClick={() => setMedicalRecordIsOpen(true)}
-              className="text-primary font-medium"
-            >
-              <FileText className="h-4 w-4" /> Prontuário Médico (EHR)
-            </DropdownMenuItem>
+            <>
+              <DropdownMenuItem asChild>
+                <Link
+                  href={`/atendimento/avulso?patientId=${patient.id}`}
+                  className="text-emerald-700 dark:text-emerald-400 font-semibold cursor-pointer"
+                >
+                  <Stethoscope className="h-4 w-4 mr-2" /> Iniciar Atendimento Clínico
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setMedicalRecordIsOpen(true)}
+                className="cursor-pointer font-medium"
+              >
+                <History className="h-4 w-4 mr-2 text-primary" /> Histórico de Atendimentos
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
           )}
           <DropdownMenuItem onClick={() => setUpsertDialogIsOpen(true)}>
-            <Pencil className="h-4 w-4" /> Editar Dados
+            <Pencil className="h-4 w-4 mr-2" /> Editar Dados
           </DropdownMenuItem>
           {activeRole === "admin" && (
             <DropdownMenuItem onClick={() => setDeleteDialogIsOpen(true)}>
-              <Trash2 className="text-destructive h-4 w-4" /> Excluir
+              <Trash2 className="text-destructive h-4 w-4 mr-2" /> Excluir
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>
@@ -143,7 +170,7 @@ const PatientTableAction = ({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Modal de Prontuário Eletrônico Independente */}
+      {/* Modal de Histórico de Atendimentos & Ficha de Saúde */}
       <MedicalRecordDialog
         isOpen={medicalRecordIsOpen}
         onOpenChange={setMedicalRecordIsOpen}
