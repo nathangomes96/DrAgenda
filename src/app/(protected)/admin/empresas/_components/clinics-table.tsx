@@ -12,6 +12,7 @@ import {
   Sparkles,
   Stethoscope,
   Users,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,6 +28,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { CreateClinicDialog } from "./create-clinic-dialog";
 import { RenewPlanDialog } from "./renew-plan-dialog";
 
 interface ClinicItem {
@@ -66,6 +68,7 @@ export function ClinicsTable({ clinics, plans }: ClinicsTableProps) {
   const [search, setSearch] = useState("");
   const [selectedClinic, setSelectedClinic] = useState<ClinicItem | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const filteredClinics = useMemo(() => {
@@ -137,8 +140,8 @@ export function ClinicsTable({ clinics, plans }: ClinicsTableProps) {
 
   return (
     <div className="space-y-4">
-      {/* Barra de Busca */}
-      <div className="flex flex-col sm:flex-row justify-between gap-3">
+      {/* Barra de Busca e Ações */}
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
@@ -148,10 +151,18 @@ export function ClinicsTable({ clinics, plans }: ClinicsTableProps) {
             className="pl-9"
           />
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>
-            Total: <strong>{filteredClinics.length}</strong> empresas cadastradas
+        <div className="flex items-center justify-between sm:justify-end gap-3">
+          <span className="text-xs text-muted-foreground hidden md:inline">
+            Total: <strong>{filteredClinics.length}</strong> empresas
           </span>
+          <Button
+            onClick={() => setCreateDialogOpen(true)}
+            size="sm"
+            className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm h-9"
+          >
+            <Plus className="w-4 h-4" />
+            Cadastrar Empresa
+          </Button>
         </div>
       </div>
 
@@ -285,6 +296,12 @@ export function ClinicsTable({ clinics, plans }: ClinicsTableProps) {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         clinic={selectedClinic}
+        plans={plans}
+      />
+
+      <CreateClinicDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
         plans={plans}
       />
     </div>

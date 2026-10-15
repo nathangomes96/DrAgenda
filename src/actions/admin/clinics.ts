@@ -5,8 +5,11 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
 
+import { hashPassword } from "better-auth/crypto";
+
 import { db } from "@/db";
 import {
+  accountsTable,
   clinicsTable,
   saasPlansTable,
   usersTable,
@@ -282,4 +285,187 @@ export async function updateClinicInfoAdmin(input: UpdateClinicInfoInput) {
 
   return { success: true, slug: cleanSlug };
 }
+
+const createClinicAdminSchema = z.object({
+  name: z.string().min(2, "Nome da empresa é obrigatório"),
+  slug: z.string().optional().nullable(),
+  ownerName: z.string().min(2, "Nome do responsável é obrigatório"),
+  ownerEmail: z.string().email("E-mail do responsável inválido"),
+  password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
+  planId: z.string().uuid().optional().nullable(),
+  planStatus: z.enum(["trial", "active", "lifetime"]).optional(),
+  expirationOption: z
+    .enum(["7d", "30d", "90d", "1y", "lifetime", "custom_date"])
+    .default("7d"),
+  customDate: z.string().optional().nullable(),
+  customMaxDoctors: z.number().min(0).optional().nullable(),
+  whatsappPhone: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
+export type CreateClinicAdminInput = z.infer<typeof createClinicAdminSchema>;
+
+export async function createClinicAdmin(input: CreateClinicAdminInput) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user || !checkIsSuperAdmin(session.user)) {
+    throw new Error(
+      "Não autorizado. Apenas Super Administradores podem cadastrar empresas manualmente.",
+    );
+  }
+
+  const parsed = createClinicAdminSchema.parse(input);
+
+  // 1. Slug handling
+  let finalSlug: string;
+  if (parsed.slug && parsed.slug.trim()) {
+    const cleanSlug = parsed.slug
+      .toLowerCase()
+      .trim()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)+/g, "");
+
+    if (!cleanSlug) {
+      throw new Error("Link/slug inválido.");
+    }
+
+    const existingClinicWithSlug = await db.query.clinicsTable.findFirst({
+      where: eq(clinicsTable.slug, cleanSlug),
+    });
+
+    if (existingClinicWithSlug) {
+      throw new Error(
+        `O link "/agendar/${cleanSlug}" já está em uso por outra empresa. Escolha outro link.`,
+      );
+    }
+    finalSlug = cleanSlug;
+  } else {
+    const baseSlug =
+      parsed.name
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)+/g, "") || `clinica-${Date.now().toString(36)}`;
+
+    finalSlug = baseSlug;
+    const existingClinicWithSlug = await db.query.clinicsTable.findFirst({
+      where: eq(clinicsTable.slug, finalSlug),
+    });
+
+    if (existingClinicWithSlug) {
+      finalSlug = `${baseSlug}-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
+  }
+
+  // 2. Status & Expiration calculation
+  const now = new Date();
+  let newExpiresAt: Date | null = null;
+  let newStatus: "trial" | "active" | "expired" | "lifetime" =
+    parsed.planStatus || "trial";
+
+  switch (parsed.expirationOption) {
+    case "7d":
+      newExpiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      newStatus = "trial";
+      break;
+    case "30d":
+      newExpiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      newStatus = "active";
+      break;
+    case "90d":
+      newExpiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+      newStatus = "active";
+      break;
+    case "1y":
+      newExpiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+      newStatus = "active";
+      break;
+    case "lifetime":
+      newExpiresAt = null;
+      newStatus = "lifetime";
+      break;
+    case "custom_date":
+      if (!parsed.customDate) {
+        throw new Error("Data personalizada não informada.");
+      }
+      newExpiresAt = new Date(parsed.customDate);
+      newStatus = newExpiresAt > now ? "active" : "expired";
+      break;
+  }
+
+  // 3. User verification / creation
+  const cleanEmail = parsed.ownerEmail.toLowerCase().trim();
+  const cleanOwnerName = parsed.ownerName.trim();
+  let targetUserId: string;
+
+  const existingUser = await db.query.usersTable.findFirst({
+    where: eq(usersTable.email, cleanEmail),
+  });
+
+  if (existingUser) {
+    targetUserId = existingUser.id;
+  } else {
+    targetUserId = crypto.randomUUID();
+    const hashedPassword = await hashPassword(parsed.password);
+
+    await db.insert(usersTable).values({
+      id: targetUserId,
+      name: cleanOwnerName,
+      email: cleanEmail,
+      emailVerified: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await db.insert(accountsTable).values({
+      id: crypto.randomUUID(),
+      accountId: targetUserId,
+      providerId: "credential",
+      userId: targetUserId,
+      password: hashedPassword,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  }
+
+  // 4. Create clinic
+  const [createdClinic] = await db
+    .insert(clinicsTable)
+    .values({
+      name: parsed.name.trim(),
+      slug: finalSlug,
+      planStatus: newStatus,
+      planExpiresAt: newExpiresAt,
+      planId: parsed.planId || null,
+      customMaxDoctors: parsed.customMaxDoctors ?? null,
+      whatsappConnectedPhone: parsed.whatsappPhone?.trim() || null,
+      planNotes:
+        parsed.notes?.trim() ||
+        `Cadastrado manualmente pelo administrador em ${new Date().toLocaleDateString("pt-BR")}`,
+    })
+    .returning();
+
+  // 5. Link user to clinic as admin
+  await db.insert(usersToClinicsTable).values({
+    userId: targetUserId,
+    clinicId: createdClinic.id,
+    role: "admin",
+    status: "active",
+  });
+
+  revalidatePath("/admin/empresas");
+  revalidatePath("/dashboard");
+
+  return {
+    success: true,
+    clinicId: createdClinic.id,
+    slug: finalSlug,
+  };
+}
+
 
