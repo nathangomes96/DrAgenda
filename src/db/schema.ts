@@ -259,6 +259,7 @@ export const appointmentsTable = pgTable("appointments", {
   status: text("status", { enum: ["pending", "confirmed", "cancelled"] })
     .default("pending")
     .notNull(),
+  patientConfirmedAt: timestamp("patient_confirmed_at"),
   patientId: uuid("patient_id")
     .notNull()
     .references(() => patientsTable.id, { onDelete: "cascade" }),

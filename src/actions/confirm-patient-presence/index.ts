@@ -36,24 +36,58 @@ export const confirmPatientPresence = actionClient
     }
 
     if (action === "confirm") {
+      if (appointment.status === "pending") {
+        throw new Error(
+          "Esta solicitação de agendamento ainda está em análise pela clínica. Aguarde a aprovação para confirmar sua presença.",
+        );
+      }
+
+      const confirmedAt = new Date();
       await db
         .update(appointmentsTable)
-        .set({ status: "confirmed", updatedAt: new Date() })
+        .set({
+          status: "confirmed",
+          patientConfirmedAt: confirmedAt,
+          updatedAt: new Date(),
+        })
         .where(eq(appointmentsTable.id, appointment.id));
+
+      revalidatePath("/appointments");
+      revalidatePath("/dashboard");
+      revalidatePath("/agendamentos");
+      revalidatePath(
+        `/agendar/${appointment.clinic.slug || appointment.clinicId}/status/${appointmentId}`,
+      );
+      revalidatePath(
+        `/agendar/${appointment.clinic.slug || appointment.clinicId}/confirmar/${appointmentId}`,
+      );
+
+      return {
+        success: true,
+        status: "confirmed" as const,
+        patientConfirmedAt: confirmedAt,
+      };
     } else if (action === "cancel_request") {
       await db
         .update(appointmentsTable)
         .set({ status: "cancelled", updatedAt: new Date() })
         .where(eq(appointmentsTable.id, appointment.id));
+
+      revalidatePath("/appointments");
+      revalidatePath("/dashboard");
+      revalidatePath("/agendamentos");
+      revalidatePath(
+        `/agendar/${appointment.clinic.slug || appointment.clinicId}/status/${appointmentId}`,
+      );
+      revalidatePath(
+        `/agendar/${appointment.clinic.slug || appointment.clinicId}/confirmar/${appointmentId}`,
+      );
+
+      return {
+        success: true,
+        status: "cancelled" as const,
+      };
     }
 
-    revalidatePath("/appointments");
-    revalidatePath(
-      `/agendar/${appointment.clinic.slug || appointment.clinicId}/status/${appointmentId}`,
-    );
-
-    return {
-      success: true,
-      status: action === "confirm" ? "confirmed" : "cancelled",
-    };
+    return { success: true };
   });

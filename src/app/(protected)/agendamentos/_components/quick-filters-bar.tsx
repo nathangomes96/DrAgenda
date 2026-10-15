@@ -31,11 +31,16 @@ import { cn } from "@/lib/utils";
 
 import { getDoctorColor } from "./appointment-card";
 
+export type PeriodFilterType = "today" | "tomorrow" | "7days" | "30days" | "custom" | "all";
+
 interface QuickFiltersBarProps {
   viewMode: "grid" | "table";
   onViewModeChange: (mode: "grid" | "table") => void;
-  periodFilter: "today" | "tomorrow" | "7days" | "custom";
-  onPeriodFilterChange: (period: "today" | "tomorrow" | "7days" | "custom") => void;
+  periodFilter: PeriodFilterType;
+  onPeriodFilterChange: (period: PeriodFilterType) => void;
+  startDate?: string;
+  endDate?: string;
+  onDateRangeChange: (start: string, end: string) => void;
   selectedDoctorId: string | "all";
   onDoctorChange: (doctorId: string | "all") => void;
   doctors: any[];
@@ -50,6 +55,9 @@ export function QuickFiltersBar({
   onViewModeChange,
   periodFilter,
   onPeriodFilterChange,
+  startDate,
+  endDate,
+  onDateRangeChange,
   selectedDoctorId,
   onDoctorChange,
   doctors,
@@ -58,12 +66,21 @@ export function QuickFiltersBar({
   statusFilter,
   onStatusFilterChange,
 }: QuickFiltersBarProps) {
+  const formatDateDisplay = (dateStr?: string) => {
+    if (!dateStr) return "";
+    const parts = dateStr.split("-");
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dateStr;
+  };
+
   return (
-    <div className="bg-card rounded-2xl border p-4 space-y-4 shadow-xs">
+    <div className="bg-card rounded-2xl border p-4 space-y-3.5 shadow-xs">
       {/* Linha 1: Controles de Busca, Status e Alternância de Visualização */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Período Rápido */}
-        <div className="flex items-center gap-1.5 bg-muted/60 p-1 rounded-xl border">
+        <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border flex-wrap">
           <span className="text-[11px] font-semibold text-muted-foreground px-2">
             Período:
           </span>
@@ -90,6 +107,22 @@ export function QuickFiltersBar({
             className="h-7 text-xs px-2.5 rounded-lg"
           >
             7 dias
+          </Button>
+          <Button
+            variant={periodFilter === "30days" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => onPeriodFilterChange("30days")}
+            className="h-7 text-xs px-2.5 rounded-lg font-medium"
+          >
+            30 dias
+          </Button>
+          <Button
+            variant={periodFilter === "all" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => onPeriodFilterChange("all")}
+            className="h-7 text-xs px-2 rounded-lg text-muted-foreground"
+          >
+            Todos
           </Button>
         </div>
 
@@ -151,6 +184,53 @@ export function QuickFiltersBar({
             Lista
           </Button>
         </div>
+      </div>
+
+      {/* Linha 1.5: Faixa de Data Personalizada e Indicador Ativo */}
+      <div className="flex flex-wrap items-center justify-between gap-3 text-xs pt-1.5 border-t border-border/50">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-semibold text-muted-foreground flex items-center gap-1.5 text-[11px]">
+            <Calendar className="size-3.5 text-primary" />
+            Faixa de Data:
+          </span>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-muted-foreground font-medium">De:</span>
+            <input
+              type="date"
+              value={startDate || ""}
+              onChange={(e) => onDateRangeChange(e.target.value, endDate || "")}
+              className="h-7 text-xs px-2 rounded-lg bg-background border border-input text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary font-mono shadow-2xs"
+            />
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-muted-foreground font-medium">Até:</span>
+            <input
+              type="date"
+              value={endDate || ""}
+              onChange={(e) => onDateRangeChange(startDate || "", e.target.value)}
+              className="h-7 text-xs px-2 rounded-lg bg-background border border-input text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary font-mono shadow-2xs"
+            />
+          </div>
+
+          {startDate && endDate && (
+            <Badge variant="secondary" className="text-[11px] font-mono font-medium px-2.5 py-0.5 bg-muted/80 text-foreground border">
+              {formatDateDisplay(startDate)} a {formatDateDisplay(endDate)}
+            </Badge>
+          )}
+        </div>
+
+        {periodFilter === "custom" && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onPeriodFilterChange("7days")}
+            className="h-6 text-[11px] text-muted-foreground hover:text-foreground px-2"
+          >
+            Resetar para 7 dias
+          </Button>
+        )}
       </div>
 
       {/* Linha 2: Chips Coloridos por Profissional (Médicos) */}

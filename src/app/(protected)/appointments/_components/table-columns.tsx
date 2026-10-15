@@ -94,20 +94,34 @@ export const appointmentsTableColumns: ColumnDef<AppointmentWithRelations>[] = [
     accessorKey: "status",
     header: "Status",
     cell: (params) => {
-      const status = params.row.original.status;
+      const appointment = params.row.original;
+      const status = appointment.status;
       if (status === "pending") {
         return (
           <Badge className="bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800 hover:bg-amber-100 gap-1 font-semibold text-xs py-0.5">
             <Clock className="size-3 text-amber-700 dark:text-amber-400 animate-pulse" />
-            Pendente
+            Aguardando Aprovação
           </Badge>
         );
       }
       if (status === "confirmed") {
+        if (appointment.patientConfirmedAt) {
+          return (
+            <div className="flex flex-col">
+              <Badge className="bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 gap-1 font-semibold text-xs py-0.5 w-fit">
+                <CheckCircle2 className="size-3 text-emerald-700 dark:text-emerald-400" />
+                Confirmado Paciente
+              </Badge>
+              <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium mt-0.5">
+                {format(new Date(appointment.patientConfirmedAt), "dd/MM 'às' HH:mm", { locale: ptBR })}
+              </span>
+            </div>
+          );
+        }
         return (
-          <Badge className="bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 gap-1 font-semibold text-xs py-0.5">
-            <CheckCircle2 className="size-3 text-emerald-700 dark:text-emerald-400" />
-            Confirmado
+          <Badge className="bg-yellow-100 text-yellow-900 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-800 hover:bg-yellow-100 gap-1 font-semibold text-xs py-0.5">
+            <Clock className="size-3 text-yellow-700 dark:text-yellow-400" />
+            Pendente Paciente
           </Badge>
         );
       }

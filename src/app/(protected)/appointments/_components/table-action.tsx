@@ -103,10 +103,10 @@ const AppointmentsTableActions = ({
   const updateStatusAction = useAction(updateAppointmentStatus, {
     onSuccess: ({ data }) => {
       if (data?.status === "confirmed") {
-        toast.success(`Agendamento de ${appointment.patient.name} foi confirmado!`, {
+        toast.success(`Agendamento de ${appointment.patient.name} foi aceito!`, {
           action: {
             label: "Notificar no WhatsApp",
-            onClick: handleOpenWhatsApp,
+            onClick: () => setReminderDialogOpen(true),
           },
         });
       } else if (data?.status === "cancelled") {

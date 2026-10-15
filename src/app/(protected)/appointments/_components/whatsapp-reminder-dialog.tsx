@@ -134,7 +134,7 @@ export function WhatsAppReminderDialog({
     onError: ({ error }) => {
       toast.error(
         error.serverError ||
-          "Falha ao enviar via Evolution API. Você pode utilizar o botão 'Abrir no WhatsApp' como alternativa.",
+        "Falha ao enviar via Evolution API. Você pode utilizar o botão 'Abrir no WhatsApp' como alternativa.",
       );
     },
   });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   addDays,
   addWeeks,
@@ -32,6 +32,7 @@ interface CalendarGridProps {
   appointments: any[];
   doctors: any[];
   onSelectSlot?: (date: Date) => void;
+  targetDate?: Date;
 }
 
 // Horários exibidos na grade: das 07:00 às 20:00
@@ -41,9 +42,16 @@ export function CalendarGrid({
   appointments,
   doctors,
   onSelectSlot,
+  targetDate,
 }: CalendarGridProps) {
-  const [currentWeekDate, setCurrentWeekDate] = useState<Date>(new Date());
+  const [currentWeekDate, setCurrentWeekDate] = useState<Date>(targetDate || new Date());
   const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (targetDate) {
+      setCurrentWeekDate(targetDate);
+    }
+  }, [targetDate]);
 
   // Calcula os 7 dias da semana atual (iniciando na Segunda-feira)
   const weekDays = useMemo(() => {

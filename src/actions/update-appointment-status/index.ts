@@ -28,16 +28,29 @@ export const updateAppointmentStatus = protectedWithClinicActionClient
       throw new Error("Acesso não autorizado a este agendamento");
     }
 
+    const updateData: Partial<typeof appointmentsTable.$inferInsert> = {
+      status: parsedInput.status,
+      updatedAt: new Date(),
+    };
+
+    if (parsedInput.status === "cancelled" || parsedInput.status === "pending") {
+      updateData.patientConfirmedAt = null;
+    }
+
     await db
       .update(appointmentsTable)
-      .set({
-        status: parsedInput.status,
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(appointmentsTable.id, parsedInput.id));
 
     revalidatePath("/appointments");
     revalidatePath("/dashboard");
+    revalidatePath("/agendamentos");
+
+    const clinicIdentifier = ctx.user.clinic?.slug || ctx.user.clinic?.id;
+    if (clinicIdentifier) {
+      revalidatePath(`/agendar/${clinicIdentifier}/status/${parsedInput.id}`);
+      revalidatePath(`/agendar/${clinicIdentifier}/confirmar/${parsedInput.id}`);
+    }
 
     return {
       success: true,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { isSameDay, isWithinInterval, startOfDay, endOfDay, addDays } from "date-fns";
+import { addDays, endOfDay, format, isSameDay, isWithinInterval, startOfDay } from "date-fns";
 import { Bell, Check, Copy, ExternalLink, Filter, Link2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -14,7 +14,7 @@ import { appointmentsTable, doctorsTable, patientsTable } from "@/db/schema";
 import AddAppointmentButton from "./add-appointment-button";
 import { appointmentsTableColumns } from "./table-columns";
 import { CalendarGrid } from "../../agendamentos/_components/calendar-grid";
-import { QuickFiltersBar } from "../../agendamentos/_components/quick-filters-bar";
+import { PeriodFilterType, QuickFiltersBar } from "../../agendamentos/_components/quick-filters-bar";
 
 type AppointmentWithRelations = typeof appointmentsTable.$inferSelect & {
   patient: {
@@ -54,10 +54,15 @@ export function AppointmentsView({
 }: AppointmentsViewProps) {
   // Modo de visualização: Grade por padrão
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
-  const [periodFilter, setPeriodFilter] = useState<"today" | "tomorrow" | "7days" | "custom">("7days");
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilterType>("7days");
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
+    start: format(new Date(), "yyyy-MM-dd"),
+    end: format(addDays(new Date(), 7), "yyyy-MM-dd"),
+  });
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | "all">("all");
   const [searchPatient, setSearchPatient] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "confirmed" | "cancelled">("all");
+  const [targetCalendarDate, setTargetCalendarDate] = useState<Date | undefined>(undefined);
   const [hasCopied, setHasCopied] = useState(false);
 
   const activeIdentifier = clinicSlug || clinicId;
@@ -65,6 +70,45 @@ export function AppointmentsView({
   const pendingAppointments = appointments.filter(
     (a) => a.status === "pending",
   );
+
+  // Manipulador de troca de período rápido
+  const handlePeriodFilterChange = (period: PeriodFilterType) => {
+    setPeriodFilter(period);
+    const today = new Date();
+    if (period === "today") {
+      const formatted = format(today, "yyyy-MM-dd");
+      setDateRange({ start: formatted, end: formatted });
+      setTargetCalendarDate(today);
+    } else if (period === "tomorrow") {
+      const tomorrow = addDays(today, 1);
+      const formatted = format(tomorrow, "yyyy-MM-dd");
+      setDateRange({ start: formatted, end: formatted });
+      setTargetCalendarDate(tomorrow);
+    } else if (period === "7days") {
+      setDateRange({
+        start: format(today, "yyyy-MM-dd"),
+        end: format(addDays(today, 7), "yyyy-MM-dd"),
+      });
+      setTargetCalendarDate(today);
+    } else if (period === "30days") {
+      setDateRange({
+        start: format(today, "yyyy-MM-dd"),
+        end: format(addDays(today, 30), "yyyy-MM-dd"),
+      });
+      setTargetCalendarDate(today);
+    } else if (period === "all") {
+      setDateRange({ start: "", end: "" });
+    }
+  };
+
+  // Manipulador de faixa de data personalizada
+  const handleCustomDateRangeChange = (start: string, end: string) => {
+    setDateRange({ start, end });
+    setPeriodFilter("custom");
+    if (start) {
+      setTargetCalendarDate(new Date(start + "T00:00:00"));
+    }
+  };
 
   // Filtragem multi-critério
   const filteredAppointments = useMemo(() => {
@@ -88,34 +132,26 @@ export function AppointmentsView({
         }
       }
 
-      // 4. Filtro por período rápido (se estiver no modo de tabela ou filtrando período)
-      if (periodFilter === "today") {
-        const aptDate = new Date(appointment.date);
-        if (!isSameDay(aptDate, new Date())) {
-          return false;
-        }
-      } else if (periodFilter === "tomorrow") {
-        const aptDate = new Date(appointment.date);
-        const tomorrow = addDays(new Date(), 1);
-        if (!isSameDay(aptDate, tomorrow)) {
-          return false;
-        }
-      } else if (periodFilter === "7days") {
-        const aptDate = new Date(appointment.date);
-        const start = startOfDay(new Date());
-        const end = endOfDay(addDays(new Date(), 7));
-        if (aptDate < start || aptDate > end) {
-          // Para visualização em tabela, restringe aos 7 dias
-          // Na grade visual mantemos para navegação semanal
-          if (viewMode === "table") {
-            return false;
+      // 4. Filtro por período de data
+      // Se estiver filtrando especificamente por status "pending", nunca esconde do modo tabela
+      if (statusFilter !== "pending") {
+        if (periodFilter === "all") {
+          // Não restringe por data
+        } else if (dateRange.start && dateRange.end) {
+          const aptDate = new Date(appointment.date);
+          const start = startOfDay(new Date(dateRange.start + "T00:00:00"));
+          const end = endOfDay(new Date(dateRange.end + "T23:59:59"));
+          if (aptDate < start || aptDate > end) {
+            if (viewMode === "table") {
+              return false;
+            }
           }
         }
       }
 
       return true;
     });
-  }, [appointments, statusFilter, selectedDoctorId, searchPatient, periodFilter, viewMode]);
+  }, [appointments, statusFilter, selectedDoctorId, searchPatient, periodFilter, dateRange, viewMode]);
 
   const handleCopyBookingLink = () => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -126,6 +162,22 @@ export function AppointmentsView({
       description: "Você pode enviar este link no WhatsApp para seus pacientes.",
     });
     setTimeout(() => setHasCopied(false), 3000);
+  };
+
+  const handleViewPendingInTable = () => {
+    setStatusFilter("pending");
+    setViewMode("table");
+    if (pendingAppointments.length > 0) {
+      setTargetCalendarDate(new Date(pendingAppointments[0].date));
+    }
+  };
+
+  const handleViewPendingInGrid = () => {
+    setStatusFilter("pending");
+    setViewMode("grid");
+    if (pendingAppointments.length > 0) {
+      setTargetCalendarDate(new Date(pendingAppointments[0].date));
+    }
   };
 
   return (
@@ -195,16 +247,24 @@ export function AppointmentsView({
             </div>
           </div>
 
-          {statusFilter !== "pending" && (
+          <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setStatusFilter("pending")}
-              className="border-amber-400 bg-amber-100 text-amber-900 hover:bg-amber-200 text-xs font-semibold whitespace-nowrap self-end sm:self-auto"
+              onClick={handleViewPendingInTable}
+              className="border-amber-400 bg-amber-100 text-amber-900 hover:bg-amber-200 text-xs font-semibold whitespace-nowrap cursor-pointer shadow-2xs"
             >
-              Ver Pendentes ({pendingAppointments.length})
+              Ver na Tabela ({pendingAppointments.length})
             </Button>
-          )}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleViewPendingInGrid}
+              className="border-amber-400/80 bg-amber-50 text-amber-900 hover:bg-amber-100 text-xs font-medium whitespace-nowrap cursor-pointer"
+            >
+              Ir para Data na Grade
+            </Button>
+          </div>
         </div>
       )}
 
@@ -213,7 +273,10 @@ export function AppointmentsView({
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         periodFilter={periodFilter}
-        onPeriodFilterChange={setPeriodFilter}
+        onPeriodFilterChange={handlePeriodFilterChange}
+        startDate={dateRange.start}
+        endDate={dateRange.end}
+        onDateRangeChange={handleCustomDateRangeChange}
         selectedDoctorId={selectedDoctorId}
         onDoctorChange={setSelectedDoctorId}
         doctors={doctors}
@@ -228,6 +291,7 @@ export function AppointmentsView({
         <CalendarGrid
           appointments={filteredAppointments}
           doctors={doctors}
+          targetDate={targetCalendarDate}
         />
       ) : (
         <DataTable data={filteredAppointments} columns={appointmentsTableColumns} />

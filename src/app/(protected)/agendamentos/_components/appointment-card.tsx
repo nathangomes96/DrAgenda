@@ -106,12 +106,22 @@ export function AppointmentCard({
           className={cn(
             "size-2 rounded-full shrink-0",
             appointment.status === "confirmed"
-              ? "bg-emerald-500"
+              ? appointment.patientConfirmedAt
+                ? "bg-emerald-500"
+                : "bg-yellow-400"
               : appointment.status === "cancelled"
               ? "bg-rose-500"
-              : "bg-amber-500",
+              : "bg-amber-500 animate-pulse",
           )}
-          title={`Status: ${appointment.status}`}
+          title={
+            appointment.status === "confirmed"
+              ? appointment.patientConfirmedAt
+                ? "Consulta confirmada pelo paciente"
+                : "Aprovado pela clínica (aguardando paciente)"
+              : appointment.status === "cancelled"
+              ? "Cancelado"
+              : "Aguardando aprovação da clínica"
+          }
         />
       </div>
 

@@ -159,7 +159,9 @@ export default async function AppointmentStatusPage({ params }: PageProps) {
               }`}
             >
               {status === "confirmed"
-                ? "Consulta Confirmada"
+                ? appointment.patientConfirmedAt
+                  ? "Consulta & Presença Confirmadas"
+                  : "Aprovado pela Clínica"
                 : status === "cancelled"
                 ? "Consulta Recusada / Cancelada"
                 : "Aguardando Aprovação da Recepção"}
@@ -167,7 +169,9 @@ export default async function AppointmentStatusPage({ params }: PageProps) {
 
             <h1 className="text-xl sm:text-2xl font-black">
               {status === "confirmed"
-                ? "Seu agendamento foi aceito!"
+                ? appointment.patientConfirmedAt
+                  ? "Presença Confirmada!"
+                  : "Seu agendamento foi aprovado!"
                 : status === "cancelled"
                 ? "Horário não disponível"
                 : "Solicitação em Análise"}
@@ -175,7 +179,9 @@ export default async function AppointmentStatusPage({ params }: PageProps) {
 
             <p className="mt-1 text-xs sm:text-sm text-white/90 max-w-md mx-auto">
               {status === "confirmed"
-                ? "A equipe da clínica confirmou seu horário. Compareça com 10 minutos de antecedência."
+                ? appointment.patientConfirmedAt
+                  ? `Sua presença foi confirmada em ${format(new Date(appointment.patientConfirmedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}. Compareça com 10 minutos de antecedência.`
+                  : "A equipe da clínica aprovou sua vaga! Por favor confirme seu comparecimento no botão abaixo."
                 : status === "cancelled"
                 ? "Infelizmente este horário não pôde ser confirmado pela clínica. Por favor, solicite um novo horário."
                 : "A recepcionista está revisando os dados da consulta. Atualize a página a qualquer momento para verificar."}
@@ -253,6 +259,14 @@ export default async function AppointmentStatusPage({ params }: PageProps) {
           </CardContent>
 
           <CardFooter className="flex flex-col sm:flex-row gap-2.5 pt-2">
+            {status === "confirmed" && !appointment.patientConfirmedAt && (
+              <Button asChild className="w-full font-bold shadow-md bg-emerald-600 hover:bg-emerald-700 text-white">
+                <Link href={`/agendar/${clinicId}/confirmar/${appointmentId}`}>
+                  <CheckCircle2 className="size-4 mr-1.5" /> Confirmar Meu Comparecimento
+                </Link>
+              </Button>
+            )}
+
             {status === "cancelled" ? (
               <Button asChild className="w-full font-bold shadow-md">
                 <Link href={`/agendar/${clinicId}`}>

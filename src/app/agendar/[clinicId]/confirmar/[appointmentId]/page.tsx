@@ -174,6 +174,7 @@ export default async function ConfirmAppointmentPage({
             <ConfirmActions
               appointmentId={appointment.id}
               initialStatus={appointment.status}
+              initialPatientConfirmedAt={appointment.patientConfirmedAt}
               clinicIdentifier={clinic.slug || clinic.id}
             />
           </CardContent>
