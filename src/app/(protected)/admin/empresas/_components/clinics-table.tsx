@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import {
+  Building2,
   CalendarDays,
   Check,
   Copy,
@@ -265,11 +266,11 @@ export function ClinicsTable({ clinics, plans }: ClinicsTableProps) {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-8 gap-1 text-xs hover:border-primary hover:text-primary"
+                        className="h-8 gap-1.5 text-xs hover:border-primary hover:text-primary"
                         onClick={() => handleOpenRenew(clinic)}
                       >
-                        <CalendarDays className="w-3.5 h-3.5 text-primary" />
-                        Renovar / Gerenciar
+                        <Building2 className="w-3.5 h-3.5 text-primary" />
+                        Editar / Renovar
                       </Button>
                     </TableCell>
                   </TableRow>

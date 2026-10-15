@@ -1,12 +1,17 @@
 "use server";
 
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
 
 import { db } from "@/db";
-import { clinicsTable, saasPlansTable } from "@/db/schema";
+import {
+  clinicsTable,
+  saasPlansTable,
+  usersTable,
+  usersToClinicsTable,
+} from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { checkIsSuperAdmin } from "@/lib/superadmin";
 
@@ -174,3 +179,107 @@ export async function renewClinicPlan(input: RenewClinicPlanInput) {
 
   return { success: true };
 }
+
+const updateClinicInfoSchema = z.object({
+  clinicId: z.string().uuid(),
+  name: z.string().min(2, "Nome da empresa é obrigatório"),
+  slug: z.string().min(2, "Link/slug é obrigatório"),
+  ownerName: z.string().min(2, "Nome do responsável é obrigatório"),
+  ownerEmail: z.string().email("E-mail do responsável inválido"),
+});
+
+export type UpdateClinicInfoInput = z.infer<typeof updateClinicInfoSchema>;
+
+export async function updateClinicInfoAdmin(input: UpdateClinicInfoInput) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user || !checkIsSuperAdmin(session.user)) {
+    throw new Error(
+      "Não autorizado. Apenas Super Administradores podem editar empresas.",
+    );
+  }
+
+  const parsed = updateClinicInfoSchema.parse(input);
+
+  // Normaliza slug (letras minúsculas, números e traços)
+  const cleanSlug = parsed.slug
+    .toLowerCase()
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+
+  if (!cleanSlug) {
+    throw new Error("Link/slug inválido.");
+  }
+
+  // Verifica se o slug já existe em outra clínica
+  const existingClinicWithSlug = await db.query.clinicsTable.findFirst({
+    where: and(
+      eq(clinicsTable.slug, cleanSlug),
+      ne(clinicsTable.id, parsed.clinicId),
+    ),
+  });
+
+  if (existingClinicWithSlug) {
+    throw new Error(
+      `O link "/agendar/${cleanSlug}" já está em uso por outra empresa. Escolha outro link.`,
+    );
+  }
+
+  // Atualiza nome e slug da clínica
+  await db
+    .update(clinicsTable)
+    .set({
+      name: parsed.name.trim(),
+      slug: cleanSlug,
+      updatedAt: new Date(),
+    })
+    .where(eq(clinicsTable.id, parsed.clinicId));
+
+  // Busca o usuário admin responsável pela clínica
+  const adminLink = await db.query.usersToClinicsTable.findFirst({
+    where: and(
+      eq(usersToClinicsTable.clinicId, parsed.clinicId),
+      eq(usersToClinicsTable.role, "admin"),
+    ),
+    with: { user: true },
+  });
+
+  if (adminLink?.userId) {
+    const cleanEmail = parsed.ownerEmail.toLowerCase().trim();
+
+    // Verifica se outro usuário já usa esse e-mail
+    const existingUserWithEmail = await db.query.usersTable.findFirst({
+      where: and(
+        eq(usersTable.email, cleanEmail),
+        ne(usersTable.id, adminLink.userId),
+      ),
+    });
+
+    if (existingUserWithEmail) {
+      throw new Error(
+        `O e-mail "${cleanEmail}" já está cadastrado para outro usuário no sistema.`,
+      );
+    }
+
+    await db
+      .update(usersTable)
+      .set({
+        name: parsed.ownerName.trim(),
+        email: cleanEmail,
+        updatedAt: new Date(),
+      })
+      .where(eq(usersTable.id, adminLink.userId));
+  }
+
+  revalidatePath("/admin/empresas");
+  revalidatePath("/dashboard");
+  revalidatePath("/settings/clinic");
+
+  return { success: true, slug: cleanSlug };
+}
+

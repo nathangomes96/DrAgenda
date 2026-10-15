@@ -771,8 +771,8 @@ export function BookingForm({ clinic, doctors }: BookingFormProps) {
                                   isSelected
                                     ? "bg-teal-600 text-white font-bold border-teal-600 shadow-md scale-[1.02]"
                                     : slot.available
-                                    ? "bg-background border-border/80 hover:border-teal-500/50 hover:bg-teal-500/5 text-foreground"
-                                    : "bg-muted/40 border-transparent text-muted-foreground/40 cursor-not-allowed line-through",
+                                      ? "bg-background border-border/80 hover:border-teal-500/50 hover:bg-teal-500/5 text-foreground"
+                                      : "bg-muted/40 border-transparent text-muted-foreground/40 cursor-not-allowed line-through",
                                 )}
                               >
                                 {slot.label}
@@ -803,8 +803,8 @@ export function BookingForm({ clinic, doctors }: BookingFormProps) {
                                   isSelected
                                     ? "bg-teal-600 text-white font-bold border-teal-600 shadow-md scale-[1.02]"
                                     : slot.available
-                                    ? "bg-background border-border/80 hover:border-teal-500/50 hover:bg-teal-500/5 text-foreground"
-                                    : "bg-muted/40 border-transparent text-muted-foreground/40 cursor-not-allowed line-through",
+                                      ? "bg-background border-border/80 hover:border-teal-500/50 hover:bg-teal-500/5 text-foreground"
+                                      : "bg-muted/40 border-transparent text-muted-foreground/40 cursor-not-allowed line-through",
                                 )}
                               >
                                 {slot.label}
@@ -1096,7 +1096,7 @@ export function BookingForm({ clinic, doctors }: BookingFormProps) {
             <CheckCircle2 className="size-10" />
           </div>
 
-          <Badge className="mb-3 bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/30">
+          <Badge className="mb-3 mx-auto w-fit bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/30">
             Aguardando Aprovação da Recepção
           </Badge>
 
