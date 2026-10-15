@@ -24,6 +24,7 @@ export const usersTable = pgTable("users", {
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
   plan: text("plan"),
+  isSuperAdmin: boolean("is_super_admin").default(false).notNull(),
   createdAt: timestamp("created_at")
     .$defaultFn(() => /* @__PURE__ */ new Date())
     .notNull(),
@@ -82,6 +83,46 @@ export const verificationsTable = pgTable("verifications", {
   ),
 });
 
+// Tabela de Planos do SaaS
+export const saasPlansTable = pgTable("saas_plans", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  price: text("price").notNull(),
+  interval: text("interval").default("month").notNull(),
+  maxDoctors: integer("max_doctors").default(3).notNull(),
+  maxPatients: integer("max_patients").default(0).notNull(),
+  isPopular: boolean("is_popular").default(false).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  features: jsonb("features").$type<string[]>().default([]),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const saasPlansTablesRelation = relations(saasPlansTable, ({ many }) => ({
+  clinics: many(clinicsTable),
+}));
+
+// Tabela de Configurações da Plataforma SaaS
+export const platformSettingsTable = pgTable("platform_settings", {
+  id: text("id").primaryKey().default("default"),
+  trialDays: integer("trial_days").default(7).notNull(),
+  pixEnabled: boolean("pix_enabled").default(true).notNull(),
+  pixKey: text("pix_key"),
+  pixKeyType: text("pix_key_type"),
+  pixReceiverName: text("pix_receiver_name"),
+  pixWhatsappNumber: text("pix_whatsapp_number"),
+  mercadopagoEnabled: boolean("mercadopago_enabled").default(false).notNull(),
+  mercadopagoUrl: text("mercadopago_url"),
+  stripeEnabled: boolean("stripe_enabled").default(false).notNull(),
+  stripeUrl: text("stripe_url"),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
 // Tabela "clinics" representa as clínicas
 // Relação: N:N com users_to_clinics
 export const clinicsTable = pgTable("clinics", {
@@ -95,6 +136,17 @@ export const clinicsTable = pgTable("clinics", {
   whatsappStatus: text("whatsapp_status", {
     enum: ["connected", "disconnected", "connecting"],
   }).default("disconnected"),
+  planStatus: text("plan_status", {
+    enum: ["trial", "active", "expired", "lifetime"],
+  })
+    .default("trial")
+    .notNull(),
+  planExpiresAt: timestamp("plan_expires_at"),
+  planId: uuid("plan_id").references(() => saasPlansTable.id, {
+    onDelete: "set null",
+  }),
+  customMaxDoctors: integer("custom_max_doctors"),
+  planNotes: text("plan_notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
@@ -140,12 +192,16 @@ export const usersToClinicsTablesRelation = relations(
 
 // Relação entre clínicas e outras entidades
 // Relação: 1:N com doctors, patients, appointments e medicalRecords
-export const clinicsTablesRelation = relations(clinicsTable, ({ many }) => ({
+export const clinicsTablesRelation = relations(clinicsTable, ({ one, many }) => ({
   doctors: many(doctorsTable),
   patients: many(patientsTable),
   appointments: many(appointmentsTable),
   usersToClinics: many(usersToClinicsTable),
   medicalRecords: many(medicalRecordsTable),
+  plan: one(saasPlansTable, {
+    fields: [clinicsTable.planId],
+    references: [saasPlansTable.id],
+  }),
 }));
 
 // Tabela "doctors" representa os médicos
