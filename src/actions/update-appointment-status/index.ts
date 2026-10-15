@@ -12,7 +12,8 @@ export const updateAppointmentStatus = protectedWithClinicActionClient
   .inputSchema(
     z.object({
       id: z.string().uuid(),
-      status: z.enum(["confirmed", "cancelled", "pending"]),
+      status: z.enum(["confirmed", "cancelled", "pending"]).optional(),
+      patientConfirmed: z.boolean().optional(),
     }),
   )
   .action(async ({ parsedInput, ctx }) => {
@@ -29,12 +30,23 @@ export const updateAppointmentStatus = protectedWithClinicActionClient
     }
 
     const updateData: Partial<typeof appointmentsTable.$inferInsert> = {
-      status: parsedInput.status,
       updatedAt: new Date(),
     };
 
-    if (parsedInput.status === "cancelled" || parsedInput.status === "pending") {
-      updateData.patientConfirmedAt = null;
+    if (parsedInput.status) {
+      updateData.status = parsedInput.status;
+      if (parsedInput.status === "cancelled" || parsedInput.status === "pending") {
+        updateData.patientConfirmedAt = null;
+      }
+    }
+
+    if (typeof parsedInput.patientConfirmed === "boolean") {
+      if (parsedInput.patientConfirmed) {
+        updateData.patientConfirmedAt = new Date();
+        updateData.status = "confirmed";
+      } else {
+        updateData.patientConfirmedAt = null;
+      }
     }
 
     await db
@@ -55,6 +67,10 @@ export const updateAppointmentStatus = protectedWithClinicActionClient
     return {
       success: true,
       id: parsedInput.id,
-      status: parsedInput.status,
+      status: updateData.status || appointment.status,
+      patientConfirmedAt:
+        updateData.patientConfirmedAt !== undefined
+          ? updateData.patientConfirmedAt
+          : appointment.patientConfirmedAt,
     };
   });

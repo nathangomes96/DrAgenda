@@ -102,7 +102,9 @@ const AppointmentsTableActions = ({
 
   const updateStatusAction = useAction(updateAppointmentStatus, {
     onSuccess: ({ data }) => {
-      if (data?.status === "confirmed") {
+      if (data?.patientConfirmedAt) {
+        toast.success(`Presença de ${appointment.patient.name} confirmada manualmente!`);
+      } else if (data?.status === "confirmed") {
         toast.success(`Agendamento de ${appointment.patient.name} foi aceito!`, {
           action: {
             label: "Notificar no WhatsApp",
@@ -131,6 +133,20 @@ const AppointmentsTableActions = ({
     updateStatusAction.execute({ id: appointment.id, status: "cancelled" });
   };
 
+  const handleConfirmPatientPresenceManually = () => {
+    updateStatusAction.execute({
+      id: appointment.id,
+      patientConfirmed: true,
+    });
+  };
+
+  const handleRevertPatientPresence = () => {
+    updateStatusAction.execute({
+      id: appointment.id,
+      patientConfirmed: false,
+    });
+  };
+
   const isPending = appointment.status === "pending";
   const isConfirmed = appointment.status === "confirmed";
 
@@ -150,7 +166,21 @@ const AppointmentsTableActions = ({
         WhatsApp
       </Button>
 
-      {/* Botões rápidos quando o agendamento estiver pendente */}
+      {/* Botão rápido para confirmar presença se aceito mas ainda pendente paciente */}
+      {isConfirmed && !appointment.patientConfirmedAt && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 gap-1 bg-yellow-50 text-yellow-800 hover:bg-yellow-100 hover:text-yellow-900 border-yellow-300 dark:bg-yellow-950/40 dark:text-yellow-300 dark:border-yellow-800 text-xs font-semibold px-2.5 shadow-2xs cursor-pointer"
+          onClick={handleConfirmPatientPresenceManually}
+          disabled={updateStatusAction.isExecuting}
+          title="Confirmar presença recebida por telefone/balcão"
+        >
+          <CheckCircle2 className="size-3.5 text-yellow-700 dark:text-yellow-400" /> Confirmar Presença
+        </Button>
+      )}
+
+      {/* Botões rápidos quando o agendamento estiver pendente de aprovação da clínica */}
       {isPending && (
         <>
           <Button
@@ -205,6 +235,29 @@ const AppointmentsTableActions = ({
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
+
+          {/* Confirmação manual de presença pelo paciente */}
+          {appointment.status === "confirmed" && !appointment.patientConfirmedAt && (
+            <DropdownMenuItem
+              onClick={handleConfirmPatientPresenceManually}
+              disabled={updateStatusAction.isExecuting}
+              className="text-emerald-700 dark:text-emerald-400 font-medium focus:text-emerald-800"
+            >
+              <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-600" />
+              Confirmar Presença (Manual)
+            </DropdownMenuItem>
+          )}
+
+          {appointment.status === "confirmed" && Boolean(appointment.patientConfirmedAt) && (
+            <DropdownMenuItem
+              onClick={handleRevertPatientPresence}
+              disabled={updateStatusAction.isExecuting}
+              className="text-muted-foreground text-xs"
+            >
+              <X className="mr-2 h-3.5 w-3.5" />
+              Desfazer confirmação de presença
+            </DropdownMenuItem>
+          )}
 
           {appointment.status !== "confirmed" && (
             <DropdownMenuItem

@@ -53,7 +53,11 @@ export function AppointmentDetailSheet({
 
   const updateStatusAction = useAction(updateAppointmentStatus, {
     onSuccess: ({ data }) => {
-      if (data?.status === "confirmed") {
+      if (data?.patientConfirmedAt) {
+        toast.success("Presença do paciente confirmada manualmente!", {
+          description: "Registrado com sucesso no sistema da clínica.",
+        });
+      } else if (data?.status === "confirmed") {
         toast.success("Agendamento aceito com sucesso!", {
           description: "A vaga foi reservada na agenda da clínica.",
           action: {
@@ -132,6 +136,22 @@ export function AppointmentDetailSheet({
     }
   };
 
+  const handleConfirmPatientPresenceManually = () => {
+    updateStatusAction.execute({
+      id: appointment.id,
+      patientConfirmed: true,
+    });
+  };
+
+  const handleRevertPatientPresence = () => {
+    if (confirm("Deseja desmarcar a confirmação de presença deste paciente?")) {
+      updateStatusAction.execute({
+        id: appointment.id,
+        patientConfirmed: false,
+      });
+    }
+  };
+
   return (
     <>
       <Sheet open={isOpen} onOpenChange={onOpenChange}>
@@ -158,29 +178,54 @@ export function AppointmentDetailSheet({
             {/* Aviso de Confirmação pelo Paciente */}
             {isConfirmed && (
               isPatientConfirmed ? (
-                <div className="rounded-xl border border-emerald-300 bg-emerald-50/80 dark:border-emerald-800 dark:bg-emerald-950/40 p-3 text-xs text-emerald-900 dark:text-emerald-200 flex items-start gap-2.5">
-                  <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
-                  <div className="space-y-0.5">
-                    <p className="font-bold">Presença Confirmada pelo Paciente</p>
-                    <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80">
-                      Confirmado pelo paciente em{" "}
-                      <strong>
-                        {format(new Date(appointment.patientConfirmedAt), "dd/MM/yyyy 'às' HH:mm", {
-                          locale: ptBR,
-                        })}
-                      </strong>
-                    </p>
+                <div className="rounded-xl border border-emerald-300 bg-emerald-50/80 dark:border-emerald-800 dark:bg-emerald-950/40 p-3 text-xs text-emerald-900 dark:text-emerald-200 flex items-center justify-between gap-2.5">
+                  <div className="flex items-start gap-2.5">
+                    <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
+                    <div className="space-y-0.5">
+                      <p className="font-bold">Presença Confirmada pelo Paciente</p>
+                      <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80">
+                        Confirmado em{" "}
+                        <strong>
+                          {format(new Date(appointment.patientConfirmedAt), "dd/MM/yyyy 'às' HH:mm", {
+                            locale: ptBR,
+                          })}
+                        </strong>
+                      </p>
+                    </div>
                   </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[10px] text-muted-foreground hover:text-foreground px-2"
+                    onClick={handleRevertPatientPresence}
+                    disabled={updateStatusAction.isExecuting}
+                    title="Desmarcar confirmação do paciente"
+                  >
+                    Desfazer
+                  </Button>
                 </div>
               ) : (
-                <div className="rounded-xl border border-amber-300 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/40 p-3 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5">
-                  <Clock className="size-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0 animate-pulse" />
-                  <div className="space-y-0.5">
-                    <p className="font-bold">Aguardando Confirmação do Paciente</p>
-                    <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80">
-                      A clínica aceitou a vaga. O paciente ainda precisa confirmar o comparecimento no link do WhatsApp.
-                    </p>
+                <div className="rounded-xl border border-amber-300 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/40 p-3 text-xs text-amber-900 dark:text-amber-200 flex flex-col gap-2">
+                  <div className="flex items-start gap-2.5">
+                    <Clock className="size-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0 animate-pulse" />
+                    <div className="space-y-0.5">
+                      <p className="font-bold">Aguardando Confirmação do Paciente</p>
+                      <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80">
+                        A vaga foi aceita. O paciente ainda não clicou no link de confirmação do WhatsApp.
+                      </p>
+                    </div>
                   </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="w-full gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs h-8 shadow-xs cursor-pointer mt-1"
+                    onClick={handleConfirmPatientPresenceManually}
+                    disabled={updateStatusAction.isExecuting}
+                  >
+                    <CheckCircle2 className="size-3.5" />
+                    Confirmar Presença pelo Paciente (Manual)
+                  </Button>
                 </div>
               )
             )}
