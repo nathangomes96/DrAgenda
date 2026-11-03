@@ -13,3 +13,4 @@ export const updateClinicAiAgentSchema = z.object({
 });
 
 export type UpdateClinicAiAgentInput = z.infer<typeof updateClinicAiAgentSchema>;
+

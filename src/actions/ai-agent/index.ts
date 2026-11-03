@@ -80,3 +80,4 @@ export const updateClinicAiAgentAction = protectedWithRoleActionClient(["admin"]
         : "Configurações salvas (Atendimento IA pausado).",
     };
   });
+

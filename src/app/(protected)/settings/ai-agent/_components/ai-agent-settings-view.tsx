@@ -412,3 +412,4 @@ export function AiAgentSettingsView({ clinic }: AiAgentSettingsViewProps) {
     </div>
   );
 }
+

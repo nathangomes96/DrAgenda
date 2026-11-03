@@ -57,3 +57,4 @@ runMigration().catch((err) => {
   console.error("Falha ao executar script:", err);
   process.exit(1);
 });
+

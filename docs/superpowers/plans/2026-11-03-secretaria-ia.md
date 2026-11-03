@@ -77,3 +77,4 @@
 - [ ] Executar `npx tsc --noEmit` para garantir 0 erros de tipagem.
 - [ ] Executar `npm run build` para garantir build de produção completo.
 - [ ] Commit e git push para deploy automático na Vercel.
+

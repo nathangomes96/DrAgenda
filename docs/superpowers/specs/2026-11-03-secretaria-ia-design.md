@@ -35,3 +35,4 @@ Adicionar 6 novas colunas na tabela `clinics`:
   - `get_available_times`: slots disponíveis do médico na data usando `getPublicAvailableTimes`.
   - `create_appointment`: checa `aiAllowBooking`, escala e conflitos, cadastra/localiza paciente, gera código `AG-XXXX`, insere agendamento e retorna dados completos.
   - `update_appointment_status`: checa `aiAllowCancelOrConfirm`, localiza agendamento por código e telefone, atualiza status (e `patientConfirmedAt = new Date()` se confirmado).
+
