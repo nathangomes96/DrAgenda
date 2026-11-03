@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Building2,
   CalendarDays,
@@ -69,6 +70,13 @@ interface ClinicsTableProps {
 }
 
 export function ClinicsTable({ clinics, plans }: ClinicsTableProps) {
+  const router = useRouter();
+  const [clinicsList, setClinicsList] = useState<ClinicItem[]>(clinics);
+
+  useEffect(() => {
+    setClinicsList(clinics);
+  }, [clinics]);
+
   const [search, setSearch] = useState("");
   const [selectedClinic, setSelectedClinic] = useState<ClinicItem | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -77,16 +85,16 @@ export function ClinicsTable({ clinics, plans }: ClinicsTableProps) {
   const [togglingAiId, setTogglingAiId] = useState<string | null>(null);
 
   const filteredClinics = useMemo(() => {
-    if (!search.trim()) return clinics;
+    if (!search.trim()) return clinicsList;
     const term = search.toLowerCase().trim();
-    return clinics.filter(
+    return clinicsList.filter(
       (c) =>
         c.name.toLowerCase().includes(term) ||
         (c.slug && c.slug.toLowerCase().includes(term)) ||
         (c.owner && c.owner.email.toLowerCase().includes(term)) ||
         (c.owner && c.owner.name.toLowerCase().includes(term)),
     );
-  }, [clinics, search]);
+  }, [clinicsList, search]);
 
   const handleCopyLink = (c: ClinicItem) => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -98,18 +106,33 @@ export function ClinicsTable({ clinics, plans }: ClinicsTableProps) {
   };
 
   
-  const handleToggleAiAgent = async (c: ClinicItem) => {
+    const handleToggleAiAgent = async (c: ClinicItem) => {
+    const newStatus = !c.aiAgentEnabled;
     try {
       setTogglingAiId(c.id);
-      const newStatus = !c.aiAgentEnabled;
+
+      // Atualização visual otimista imediata na tabela
+      setClinicsList((prev) =>
+        prev.map((item) =>
+          item.id === c.id ? { ...item, aiAgentEnabled: newStatus } : item,
+        ),
+      );
+
       await toggleClinicAiAgentAdmin({ clinicId: c.id, enabled: newStatus });
-      c.aiAgentEnabled = newStatus;
+
       toast.success(
         newStatus
           ? `Módulo Secretária IA LIBERADO para "${c.name}"!`
-          : `Módulo Secretária IA BLOQUEADO para "${c.name}".`
+          : `Módulo Secretária IA BLOQUEADO para "${c.name}".`,
       );
+      router.refresh();
     } catch (err: any) {
+      // Reverte se der erro
+      setClinicsList((prev) =>
+        prev.map((item) =>
+          item.id === c.id ? { ...item, aiAgentEnabled: !newStatus } : item,
+        ),
+      );
       toast.error(err.message || "Erro ao alterar módulo Secretária IA.");
     } finally {
       setTogglingAiId(null);

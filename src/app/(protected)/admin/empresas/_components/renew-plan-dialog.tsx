@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Building2,
   CalendarDays,
@@ -80,11 +81,13 @@ interface RenewPlanDialogProps {
 }
 
 export function RenewPlanDialog({
+
   open,
   onOpenChange,
   clinic,
   plans,
 }: RenewPlanDialogProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [savingCompany, setSavingCompany] = useState(false);
   const [aiAgentEnabled, setAiAgentEnabled] = useState(false);
@@ -169,6 +172,7 @@ export function RenewPlanDialog({
       }
 
       toast.success("Dados da empresa e do responsável atualizados com sucesso!");
+      router.refresh();
     } catch (error: any) {
       toast.error(error.message || "Erro ao atualizar dados da empresa.");
     } finally {
@@ -188,7 +192,10 @@ export function RenewPlanDialog({
           ? Number(customMaxDoctors)
           : undefined,
         notes: notes || undefined,
+        aiAgentEnabled,
       });
+
+      router.refresh();
 
       const labelMap: Record<string, string> = {
         "+30d": "Plano renovado por +30 dias!",
@@ -203,6 +210,31 @@ export function RenewPlanDialog({
       onOpenChange(false);
     } catch (error: any) {
       toast.error(error.message || "Erro ao atualizar plano.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  const handleSavePlanSettings = async () => {
+    setLoading(true);
+    try {
+      await renewClinicPlan({
+        clinicId: clinic.id,
+        actionType: "keep_current",
+        planId: selectedPlanId || undefined,
+        customMaxDoctors: customMaxDoctors
+          ? Number(customMaxDoctors)
+          : undefined,
+        notes: notes || undefined,
+        aiAgentEnabled,
+      });
+
+      toast.success("Configurações do plano e Secretária IA atualizadas com sucesso!");
+      router.refresh();
+      onOpenChange(false);
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao salvar configurações do plano.");
     } finally {
       setLoading(false);
     }
@@ -227,9 +259,11 @@ export function RenewPlanDialog({
           ? Number(customMaxDoctors)
           : undefined,
         notes: notes || undefined,
+        aiAgentEnabled,
       });
 
       toast.success("Validade do plano atualizada com sucesso!");
+      router.refresh();
       onOpenChange(false);
     } catch (error: any) {
       toast.error(error.message || "Erro ao salvar data personalizada.");
@@ -562,15 +596,11 @@ export function RenewPlanDialog({
             <div className="flex justify-end pt-2 border-t">
               <Button
                 type="button"
-                onClick={() =>
-                  handleQuickAction(
-                    clinic.planStatus === "lifetime" ? "lifetime" : "+30d",
-                  )
-                }
+                onClick={handleSavePlanSettings}
                 disabled={loading}
               >
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Salvar Alterações do Plano
+                Salvar Alterações (Secretária IA & Limites)
               </Button>
             </div>
           </TabsContent>

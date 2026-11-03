@@ -86,6 +86,7 @@ const renewClinicPlanSchema = z.object({
     "lifetime",
     "expire",
     "custom_date",
+    "keep_current",
   ]),
   customDate: z.string().optional().nullable(),
   planId: z.string().uuid().optional().nullable(),
@@ -155,6 +156,10 @@ export async function renewClinicPlan(input: RenewClinicPlanInput) {
       newExpiresAt = new Date(now.getTime() - 1000);
       newStatus = "expired";
       break;
+    case "keep_current":
+      newExpiresAt = clinic.planExpiresAt;
+      newStatus = clinic.planStatus;
+      break;
     case "custom_date":
       if (!parsed.customDate) {
         throw new Error("Data personalizada não informada.");
@@ -174,7 +179,12 @@ export async function renewClinicPlan(input: RenewClinicPlanInput) {
         ? { customMaxDoctors: parsed.customMaxDoctors }
         : {}),
       ...(parsed.notes !== undefined ? { planNotes: parsed.notes } : {}),
-      ...(parsed.aiAgentEnabled !== undefined ? { aiAgentEnabled: parsed.aiAgentEnabled } : {}),
+      ...(parsed.aiAgentEnabled !== undefined
+        ? {
+            aiAgentEnabled: parsed.aiAgentEnabled,
+            ...(parsed.aiAgentEnabled === false ? { aiAgentActive: false } : {}),
+          }
+        : {}),
       updatedAt: new Date(),
     })
     .where(eq(clinicsTable.id, parsed.clinicId));
