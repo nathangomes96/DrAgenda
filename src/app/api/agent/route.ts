@@ -16,7 +16,18 @@ import { generateAppointmentCode } from "@/helpers/appointment-code";
  * Função utilitária para normalizar números de telefone e comparar
  * últimos 8 ou 9 dígitos (compatível com ou sem DDI 55 e 9º dígito móvel)
  */
+
+function isGroupJid(phone?: string | null): boolean {
+  if (!phone) return false;
+  return (
+    phone.includes("@g.us") ||
+    phone.includes("-") ||
+    phone.toLowerCase().includes("group")
+  );
+}
+
 function matchPhone(phoneA: string, phoneB: string): boolean {
+  if (isGroupJid(phoneA) || isGroupJid(phoneB)) return false;
   const digitsA = (phoneA || "").replace(/\D/g, "");
   const digitsB = (phoneB || "").replace(/\D/g, "");
 
@@ -134,6 +145,12 @@ export async function POST(req: NextRequest) {
 
       // 2. Busca paciente pelo telefone
       const patientPhone = String(body.patientPhone || "").trim();
+      if (isGroupJid(patientPhone)) {
+        return NextResponse.json(
+          { ok: false, error: "Interações em grupos do WhatsApp são ignoradas por segurança." },
+          { status: 400 },
+        );
+      }
       let patientAppointments: any[] = [];
 
       if (patientPhone) {
@@ -263,6 +280,12 @@ export async function POST(req: NextRequest) {
         patientEmail,
       } = body;
 
+      if (isGroupJid(patientPhone)) {
+        return NextResponse.json(
+          { ok: false, error: "Agendamento em grupos do WhatsApp não é permitido." },
+          { status: 400 },
+        );
+      }
       if (!doctorId || !date || !time || !patientName || !patientPhone) {
         return NextResponse.json(
           {
@@ -432,6 +455,12 @@ export async function POST(req: NextRequest) {
 
       const { patientPhone, appointmentCode, status } = body;
 
+      if (isGroupJid(patientPhone)) {
+        return NextResponse.json(
+          { ok: false, error: "Alteração de status em grupos do WhatsApp não é permitida." },
+          { status: 400 },
+        );
+      }
       if (!patientPhone || !appointmentCode || !status) {
         return NextResponse.json(
           {

@@ -109,6 +109,7 @@ export async function createEvolutionInstance(
         instanceName: config.instanceName,
         qrcode: true,
         integration: "WHATSAPP-BAILEYS",
+        groupsIgnore: true,
       }),
     });
 
@@ -214,6 +215,13 @@ export async function sendEvolutionTextMessage(
     };
   }
 
+  if (params.number.includes("@g.us") || params.number.includes("-")) {
+    return {
+      success: false,
+      error: "Envio de mensagens para grupos do WhatsApp é bloqueado por segurança.",
+    };
+  }
+
   const cleanPhone = params.number.replace(/\D/g, "");
   const fullPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
 
@@ -316,5 +324,47 @@ export async function setEvolutionWebhook(
       success: false,
       error: error?.message || "Falha ao conectar na Evolution API para configurar webhook.",
     };
+  }
+}
+
+/**
+ * Aplica configurações na instância da Evolution API (ex: ignorar mensagens de grupos)
+ */
+export async function setEvolutionSettings(
+  config: EvolutionConfig,
+  settings: {
+    groupsIgnore?: boolean;
+    rejectCall?: boolean;
+    alwaysOnline?: boolean;
+    readMessages?: boolean;
+  } = {},
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  if (!config.apiUrl || !config.apiKey) {
+    return { success: false, error: "Evolution API não configurada." };
+  }
+
+  try {
+    const res = await fetch(
+      `${config.apiUrl}/settings/set/${config.instanceName}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: config.apiKey,
+        },
+        body: JSON.stringify({
+          groupsIgnore: settings.groupsIgnore ?? true,
+          rejectCall: settings.rejectCall ?? false,
+          alwaysOnline: settings.alwaysOnline ?? false,
+          readMessages: settings.readMessages ?? false,
+        }),
+      },
+    );
+
+    const data = await res.json().catch(() => ({}));
+    return { success: res.ok, data };
+  } catch (error: any) {
+    console.error("Erro ao aplicar settings na Evolution API:", error);
+    return { success: false, error: error?.message };
   }
 }

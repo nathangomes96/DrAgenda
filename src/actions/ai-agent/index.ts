@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
 import { clinicsTable } from "@/db/schema";
-import { resolveEvolutionConfig, setEvolutionWebhook } from "@/lib/evolution-api";
+import { resolveEvolutionConfig, setEvolutionSettings, setEvolutionWebhook } from "@/lib/evolution-api";
 import { protectedWithRoleActionClient } from "@/lib/next-safe-action";
 
 import { updateClinicAiAgentSchema } from "./schema";
@@ -48,6 +48,8 @@ export const updateClinicAiAgentAction = protectedWithRoleActionClient(["admin"]
     try {
       const evolutionConfig = resolveEvolutionConfig(clinic);
       if (evolutionConfig.apiUrl && evolutionConfig.apiKey) {
+        // Garante que grupos do WhatsApp fiquem 100% ignorados na instância
+        await setEvolutionSettings(evolutionConfig, { groupsIgnore: true });
         if (parsedInput.aiAgentActive) {
           const webhookUrl = process.env.AGENTES_WEBHOOK_URL;
           await setEvolutionWebhook(evolutionConfig, {
