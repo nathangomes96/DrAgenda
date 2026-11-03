@@ -297,10 +297,12 @@ export async function setEvolutionWebhook(
           apikey: config.apiKey,
         },
         body: JSON.stringify({
-          enabled: params.enabled,
-          url: webhookUrl,
-          webhookByEvents: params.webhookByEvents ?? false,
-          events: params.events ?? ["MESSAGES_UPSERT"],
+          webhook: {
+            enabled: params.enabled,
+            url: webhookUrl,
+            webhookByEvents: params.webhookByEvents ?? false,
+            events: params.events ?? ["MESSAGES_UPSERT"],
+          },
         }),
       },
     );
@@ -353,10 +355,13 @@ export async function setEvolutionSettings(
           apikey: config.apiKey,
         },
         body: JSON.stringify({
-          groupsIgnore: settings.groupsIgnore ?? true,
           rejectCall: settings.rejectCall ?? false,
+          msgCall: "",
+          groupsIgnore: settings.groupsIgnore ?? true,
           alwaysOnline: settings.alwaysOnline ?? false,
           readMessages: settings.readMessages ?? false,
+          readStatus: false,
+          syncFullHistory: false,
         }),
       },
     );
