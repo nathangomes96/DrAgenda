@@ -13,6 +13,8 @@ import {
   Stethoscope,
   Users,
   Plus,
+  Bot,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -28,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { toggleClinicAiAgentAdmin } from "@/actions/admin/clinics";
 import { CreateClinicDialog } from "./create-clinic-dialog";
 import { RenewPlanDialog } from "./renew-plan-dialog";
 
@@ -51,6 +54,7 @@ interface ClinicItem {
     email: string;
   } | null;
   doctorsCount: number;
+  aiAgentEnabled?: boolean;
   createdAt: Date | string;
 }
 
@@ -70,6 +74,7 @@ export function ClinicsTable({ clinics, plans }: ClinicsTableProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [togglingAiId, setTogglingAiId] = useState<string | null>(null);
 
   const filteredClinics = useMemo(() => {
     if (!search.trim()) return clinics;
@@ -90,6 +95,25 @@ export function ClinicsTable({ clinics, plans }: ClinicsTableProps) {
     setCopiedId(c.id);
     toast.success("Link público da clínica copiado!");
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  
+  const handleToggleAiAgent = async (c: ClinicItem) => {
+    try {
+      setTogglingAiId(c.id);
+      const newStatus = !c.aiAgentEnabled;
+      await toggleClinicAiAgentAdmin({ clinicId: c.id, enabled: newStatus });
+      c.aiAgentEnabled = newStatus;
+      toast.success(
+        newStatus
+          ? `Módulo Secretária IA LIBERADO para "${c.name}"!`
+          : `Módulo Secretária IA BLOQUEADO para "${c.name}".`
+      );
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao alterar módulo Secretária IA.");
+    } finally {
+      setTogglingAiId(null);
+    }
   };
 
   const handleOpenRenew = (clinic: ClinicItem) => {
@@ -176,6 +200,7 @@ export function ClinicsTable({ clinics, plans }: ClinicsTableProps) {
               <TableHead>Plano & Limites</TableHead>
               <TableHead>Validade</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="text-center">Secretária IA</TableHead>
               <TableHead className="text-right">Ação</TableHead>
             </TableRow>
           </TableHeader>
@@ -271,6 +296,28 @@ export function ClinicsTable({ clinics, plans }: ClinicsTableProps) {
 
                     {/* Status */}
                     <TableCell>{getStatusBadge(clinic)}</TableCell>
+
+                    {/* Secretária IA */}
+                    <TableCell className="text-center">
+                      <button
+                        type="button"
+                        disabled={togglingAiId === clinic.id}
+                        onClick={() => handleToggleAiAgent(clinic)}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+                          clinic.aiAgentEnabled
+                            ? "bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30 hover:bg-purple-500/25"
+                            : "bg-muted text-muted-foreground border-border hover:bg-muted/80"
+                        }`}
+                        title="Clique para ativar/desativar o módulo pago Secretária IA"
+                      >
+                        {togglingAiId === clinic.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Bot className="w-3.5 h-3.5" />
+                        )}
+                        <span>{clinic.aiAgentEnabled ? "Liberado" : "Bloqueado"}</span>
+                      </button>
+                    </TableCell>
 
                     {/* Ações */}
                     <TableCell className="text-right">

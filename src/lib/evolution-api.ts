@@ -257,3 +257,64 @@ export async function sendEvolutionTextMessage(
     };
   }
 }
+
+/**
+ * Configura ou desativa o webhook da Evolution API para a instância
+ */
+export async function setEvolutionWebhook(
+  config: EvolutionConfig,
+  params: {
+    enabled: boolean;
+    url?: string;
+    events?: string[];
+    webhookByEvents?: boolean;
+  },
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  if (!config.apiUrl || !config.apiKey) {
+    return {
+      success: false,
+      error: "Servidor da Evolution API não está configurado.",
+    };
+  }
+
+  const webhookUrl = params.url || process.env.AGENTES_WEBHOOK_URL || "";
+
+  try {
+    const res = await fetch(
+      `${config.apiUrl}/webhook/set/${config.instanceName}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: config.apiKey,
+        },
+        body: JSON.stringify({
+          enabled: params.enabled,
+          url: webhookUrl,
+          webhookByEvents: params.webhookByEvents ?? false,
+          events: params.events ?? ["MESSAGES_UPSERT"],
+        }),
+      },
+    );
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.error(
+        `Erro ao configurar webhook na Evolution API: ${res.status} ${errText}`,
+      );
+      return {
+        success: false,
+        error: `Erro ${res.status} retornado pela Evolution API ao configurar webhook.`,
+      };
+    }
+
+    const data = await res.json().catch(() => ({}));
+    return { success: true, data };
+  } catch (error: any) {
+    console.error("Erro ao chamar endpoint de webhook da Evolution API:", error);
+    return {
+      success: false,
+      error: error?.message || "Falha ao conectar na Evolution API para configurar webhook.",
+    };
+  }
+}

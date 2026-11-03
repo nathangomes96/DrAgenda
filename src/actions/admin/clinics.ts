@@ -70,6 +70,7 @@ export async function getClinicsAdmin() {
           }
         : null,
       doctorsCount: c.doctors?.length || 0,
+      aiAgentEnabled: Boolean(c.aiAgentEnabled),
       createdAt: c.createdAt,
     };
   });
@@ -90,6 +91,7 @@ const renewClinicPlanSchema = z.object({
   planId: z.string().uuid().optional().nullable(),
   customMaxDoctors: z.number().min(0).optional().nullable(),
   notes: z.string().optional().nullable(),
+  aiAgentEnabled: z.boolean().optional(),
 });
 
 export type RenewClinicPlanInput = z.infer<typeof renewClinicPlanSchema>;
@@ -172,6 +174,7 @@ export async function renewClinicPlan(input: RenewClinicPlanInput) {
         ? { customMaxDoctors: parsed.customMaxDoctors }
         : {}),
       ...(parsed.notes !== undefined ? { planNotes: parsed.notes } : {}),
+      ...(parsed.aiAgentEnabled !== undefined ? { aiAgentEnabled: parsed.aiAgentEnabled } : {}),
       updatedAt: new Date(),
     })
     .where(eq(clinicsTable.id, parsed.clinicId));
@@ -301,6 +304,7 @@ const createClinicAdminSchema = z.object({
   customMaxDoctors: z.number().min(0).optional().nullable(),
   whatsappPhone: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
+  aiAgentEnabled: z.boolean().optional(),
 });
 
 export type CreateClinicAdminInput = z.infer<typeof createClinicAdminSchema>;
@@ -444,6 +448,7 @@ export async function createClinicAdmin(input: CreateClinicAdminInput) {
       planId: parsed.planId || null,
       customMaxDoctors: parsed.customMaxDoctors ?? null,
       whatsappConnectedPhone: parsed.whatsappPhone?.trim() || null,
+      aiAgentEnabled: parsed.aiAgentEnabled ?? false,
       planNotes:
         parsed.notes?.trim() ||
         `Cadastrado manualmente pelo administrador em ${new Date().toLocaleDateString("pt-BR")}`,
@@ -469,3 +474,40 @@ export async function createClinicAdmin(input: CreateClinicAdminInput) {
 }
 
 
+
+
+const toggleClinicAiAgentSchema = z.object({
+  clinicId: z.string().uuid(),
+  enabled: z.boolean(),
+});
+
+export type ToggleClinicAiAgentInput = z.infer<typeof toggleClinicAiAgentSchema>;
+
+export async function toggleClinicAiAgentAdmin(input: ToggleClinicAiAgentInput) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user || !checkIsSuperAdmin(session.user)) {
+    throw new Error(
+      "Não autorizado. Apenas Super Administradores podem alterar o status do módulo Secretária IA.",
+    );
+  }
+
+  const parsed = toggleClinicAiAgentSchema.parse(input);
+
+  await db
+    .update(clinicsTable)
+    .set({
+      aiAgentEnabled: parsed.enabled,
+      ...(parsed.enabled === false ? { aiAgentActive: false } : {}),
+      updatedAt: new Date(),
+    })
+    .where(eq(clinicsTable.id, parsed.clinicId));
+
+  revalidatePath("/admin/empresas");
+  revalidatePath("/dashboard");
+  revalidatePath("/settings/ai-agent");
+
+  return { success: true, enabled: parsed.enabled };
+}

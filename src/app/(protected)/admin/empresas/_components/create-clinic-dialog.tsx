@@ -39,6 +39,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Bot } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
 interface PlanItem {
@@ -80,6 +82,7 @@ export function CreateClinicDialog({
   const [customDate, setCustomDate] = useState<string>("");
   const [customMaxDoctors, setCustomMaxDoctors] = useState<string>("");
   const [notes, setNotes] = useState("");
+  const [aiAgentEnabled, setAiAgentEnabled] = useState(false);
 
   // Auto-seleciona o primeiro plano se disponível
   useEffect(() => {
@@ -103,6 +106,7 @@ export function CreateClinicDialog({
       setCustomDate("");
       setCustomMaxDoctors("");
       setNotes("");
+      setAiAgentEnabled(false);
       setActiveTab("empresa");
       if (plans.length > 0) setPlanId(plans[0].id);
     }
@@ -205,6 +209,7 @@ export function CreateClinicDialog({
             : null,
         whatsappPhone: whatsappPhone.trim() || null,
         notes: notes.trim() || null,
+        aiAgentEnabled,
       });
 
       toast.success(`Empresa "${name}" cadastrada com sucesso!`);
@@ -515,6 +520,24 @@ export function CreateClinicDialog({
                 <p className="text-[11px] text-muted-foreground">
                   Deixe vazio para manter o limite natural do plano selecionado.
                 </p>
+              </div>
+
+
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-purple-500/5 border-purple-500/20">
+                <div className="space-y-0.5 pr-2">
+                  <div className="flex items-center gap-1.5 font-semibold text-xs text-foreground">
+                    <Bot className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    <span>Liberar Módulo Secretária IA</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Permite que a clínica configure a secretária virtual no WhatsApp.
+                  </p>
+                </div>
+                <Switch
+                  checked={aiAgentEnabled}
+                  onCheckedChange={setAiAgentEnabled}
+                  disabled={isLoading}
+                />
               </div>
 
               <div className="space-y-1.5">

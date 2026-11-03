@@ -147,6 +147,14 @@ export const clinicsTable = pgTable("clinics", {
   }),
   customMaxDoctors: integer("custom_max_doctors"),
   planNotes: text("plan_notes"),
+  aiAgentEnabled: boolean("ai_agent_enabled").default(false).notNull(),
+  aiAgentActive: boolean("ai_agent_active").default(false).notNull(),
+  aiAssistantName: text("ai_assistant_name").default("Sofia"),
+  aiCustomInstructions: text("ai_custom_instructions"),
+  aiAllowBooking: boolean("ai_allow_booking").default(true).notNull(),
+  aiAllowCancelOrConfirm: boolean("ai_allow_cancel_or_confirm")
+    .default(true)
+    .notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()

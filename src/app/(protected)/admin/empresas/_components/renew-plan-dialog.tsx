@@ -43,6 +43,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Bot } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
 interface RenewPlanDialogProps {
@@ -56,6 +58,7 @@ interface RenewPlanDialogProps {
     planExpiresAt: Date | string | null;
     planNotes: string | null;
     customMaxDoctors: number | null;
+    aiAgentEnabled?: boolean;
     plan: {
       id: string;
       name: string;
@@ -84,6 +87,7 @@ export function RenewPlanDialog({
 }: RenewPlanDialogProps) {
   const [loading, setLoading] = useState(false);
   const [savingCompany, setSavingCompany] = useState(false);
+  const [aiAgentEnabled, setAiAgentEnabled] = useState(false);
 
   // Estados dos Dados Cadastrais da Empresa
   const [name, setName] = useState("");
@@ -114,6 +118,7 @@ export function RenewPlanDialog({
       );
       setNotes(clinic.planNotes || "");
       setActionType("+30d");
+      setAiAgentEnabled(Boolean(clinic.aiAgentEnabled));
 
       if (clinic.planExpiresAt) {
         const d = new Date(clinic.planExpiresAt);
@@ -512,6 +517,32 @@ export function RenewPlanDialog({
                 >
                   Aplicar Data
                 </Button>
+              </div>
+            </div>
+
+
+            {/* Módulo Pago: Secretária IA */}
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between p-3.5 rounded-xl border bg-purple-500/5 border-purple-500/20">
+                <div className="space-y-0.5 pr-2">
+                  <div className="flex items-center gap-1.5 font-semibold text-xs text-foreground">
+                    <Bot className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    <span>Módulo Adicional: Secretária IA</span>
+                    {aiAgentEnabled && (
+                      <Badge className="bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/30 text-[10px] px-1.5 py-0 h-4">
+                        Ativo
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Libera o acesso à Secretária Virtual no WhatsApp da clínica para atender, tirar dúvidas e agendar consultas.
+                  </p>
+                </div>
+                <Switch
+                  checked={aiAgentEnabled}
+                  onCheckedChange={setAiAgentEnabled}
+                  disabled={loading}
+                />
               </div>
             </div>
 

@@ -1,5 +1,6 @@
 "use client";
 import {
+  Bot,
   Boxes,
   Building,
   Building2,
@@ -179,6 +180,19 @@ const AppSidebar = () => {
                     <Link href="/settings/clinic">
                       <Building2 className="text-primary" />
                       <span>Dados da Clínica</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/settings/ai-agent"}
+                  >
+                    <Link href="/settings/ai-agent">
+                      <Bot className="text-purple-600 dark:text-purple-400" />
+                      <span>Secretária IA</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
