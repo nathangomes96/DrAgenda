@@ -1,10 +1,10 @@
 "use server";
 
-import dayjs from "dayjs";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
 import { appointmentsTable } from "@/db/schema";
+import dayjs, { BRAZIL_TIMEZONE } from "@/lib/dayjs";
 import { protectedWithClinicActionClient } from "@/lib/next-safe-action";
 
 import { getAvailableTimes } from "../get-available-times";
@@ -13,9 +13,10 @@ import { addAppointmentSchema } from "./schema";
 export const addAppointment = protectedWithClinicActionClient
   .inputSchema(addAppointmentSchema)
   .action(async ({ parsedInput, ctx }) => {
+    const dateFormatted = dayjs(parsedInput.date).tz(BRAZIL_TIMEZONE).format("YYYY-MM-DD");
     const availableTimes = await getAvailableTimes({
       doctorId: parsedInput.doctorId,
-      date: dayjs(parsedInput.date).format("YYYY-MM-DD"),
+      date: dateFormatted,
     });
     if (!availableTimes?.data) {
       throw new Error("No available times");
@@ -26,9 +27,10 @@ export const addAppointment = protectedWithClinicActionClient
     if (!isTimeAvailable) {
       throw new Error("Time not available");
     }
-    const appointmentDateTime = dayjs(parsedInput.date)
-      .set("hour", parseInt(parsedInput.time.split(":")[0]))
-      .set("minute", parseInt(parsedInput.time.split(":")[1]))
+    const cleanTime = parsedInput.time.trim();
+    const normalizedTime = cleanTime.length === 5 ? `${cleanTime}:00` : cleanTime;
+    const appointmentDateTime = dayjs
+      .tz(`${dateFormatted} ${normalizedTime}`, BRAZIL_TIMEZONE)
       .toDate();
 
     await db.insert(appointmentsTable).values({

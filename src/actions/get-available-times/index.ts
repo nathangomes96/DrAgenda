@@ -1,6 +1,6 @@
 "use server";
 
-import dayjs from "dayjs";
+import dayjs, { BRAZIL_TIMEZONE } from "@/lib/dayjs";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -58,14 +58,18 @@ export const getAvailableTimes = protectedWithClinicActionClient
       where: eq(appointmentsTable.doctorId, parsedInput.doctorId),
     });
 
+    // Filtra agendamentos ativos na data selecionada respeitando o fuso de Brasília
     const bookedTimesOnSelectedDate = appointments
       .filter((appointment) => {
+        const appointmentInBrazil = dayjs(appointment.date).tz(BRAZIL_TIMEZONE);
         return (
           appointment.status !== "cancelled" &&
-          dayjs(appointment.date).format("YYYY-MM-DD") === parsedInput.date
+          appointmentInBrazil.format("YYYY-MM-DD") === parsedInput.date
         );
       })
-      .map((appointment) => dayjs(appointment.date).format("HH:mm:ss"));
+      .map((appointment) =>
+        dayjs(appointment.date).tz(BRAZIL_TIMEZONE).format("HH:mm:ss"),
+      );
 
     const slotInterval = doctor.appointmentDurationInMinutes || 30;
     const timeSlots = generateTimeSlots(slotInterval);
@@ -98,8 +102,9 @@ export const getAvailableTimes = protectedWithClinicActionClient
       return time >= fromTime && time <= toTime;
     });
 
-    const isToday = parsedInput.date === dayjs().format("YYYY-MM-DD");
-    const currentTime = dayjs().format("HH:mm:ss");
+    const nowInBrazil = dayjs().tz(BRAZIL_TIMEZONE);
+    const isToday = parsedInput.date === nowInBrazil.format("YYYY-MM-DD");
+    const currentTime = nowInBrazil.format("HH:mm:ss");
 
     return doctorTimeSlots.map((time) => {
       const isPastTime = isToday && time <= currentTime;

@@ -1,6 +1,5 @@
 "use server";
 
-import dayjs from "dayjs";
 import { and, eq, ne, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -11,6 +10,7 @@ import {
   doctorsTable,
   patientsTable,
 } from "@/db/schema";
+import dayjs, { BRAZIL_TIMEZONE } from "@/lib/dayjs";
 import { actionClient } from "@/lib/next-safe-action";
 
 import { generateAppointmentCode } from "@/helpers/appointment-code";
@@ -41,12 +41,11 @@ export const createClientAppointment = actionClient
       throw new Error("Médico não encontrado ou não pertence a esta clínica.");
     }
 
-    // 3. Monta data e hora do agendamento
-    const [hours, minutes] = parsedInput.time.split(":").map(Number);
-    const appointmentDateTime = dayjs(parsedInput.date)
-      .hour(hours)
-      .minute(minutes)
-      .second(0)
+    // 3. Monta data e hora do agendamento com fuso horário de Brasília
+    const cleanTime = parsedInput.time.trim();
+    const normalizedTime = cleanTime.length === 5 ? `${cleanTime}:00` : cleanTime;
+    const appointmentDateTime = dayjs
+      .tz(`${parsedInput.date} ${normalizedTime}`, BRAZIL_TIMEZONE)
       .toDate();
 
     // 4. Verificação de segurança contra concorrência (Race Condition Prevention)

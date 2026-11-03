@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import dayjs from "dayjs";
+import dayjs, { BRAZIL_TIMEZONE } from "@/lib/dayjs";
 import { and, asc, eq, ne, or } from "drizzle-orm";
 
 import { getPublicAvailableTimes } from "@/actions/get-public-available-times";
@@ -322,12 +322,14 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Monta data/hora da consulta
-      const [hours, minutes] = time.split(":").map(Number);
-      const appointmentDateTime = dayjs(date)
-        .hour(hours)
-        .minute(minutes)
-        .second(0)
+      // Monta data/hora da consulta com fuso horário oficial de Brasília (America/Sao_Paulo)
+      const cleanTime = String(time).trim();
+      const timeParts = cleanTime.split(":");
+      const hours = parseInt(timeParts[0], 10);
+      const minutes = parseInt(timeParts[1] || "0", 10);
+      const normalizedTime = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:00`;
+      const appointmentDateTime = dayjs
+        .tz(`${date} ${normalizedTime}`, BRAZIL_TIMEZONE)
         .toDate();
 
       // Checagem de colisão
@@ -436,7 +438,7 @@ export async function POST(req: NextRequest) {
           doctorName: doctor.name,
           doctorSpecialty: doctor.specialty,
           date,
-          time: `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:00`,
+          time: normalizedTime,
           priceInCents: doctor.appointmentPriceInCents,
         },
         { status: 200 },
