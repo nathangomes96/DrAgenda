@@ -152,6 +152,7 @@ export async function POST(req: NextRequest) {
         );
       }
       let patientAppointments: any[] = [];
+      let matchedPatientData: any = null;
 
       if (patientPhone) {
         const allClinicPatients = await db.query.patientsTable.findMany({
@@ -163,6 +164,14 @@ export async function POST(req: NextRequest) {
         );
 
         if (matchedPatient) {
+          matchedPatientData = {
+            id: matchedPatient.id,
+            name: matchedPatient.name,
+            sex: matchedPatient.sex,
+            email: matchedPatient.email,
+            phoneNumber: matchedPatient.phoneNumber,
+          };
+
           const rawAppointments = await db.query.appointmentsTable.findMany({
             where: and(
               eq(appointmentsTable.clinicId, clinic.id),
@@ -198,6 +207,7 @@ export async function POST(req: NextRequest) {
             allowCancelOrConfirm: clinic.aiAllowCancelOrConfirm,
           },
           doctors,
+          patient: matchedPatientData,
           patientAppointments,
         },
         { status: 200 },
